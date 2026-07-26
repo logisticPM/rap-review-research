@@ -1,0 +1,22 @@
+{
+  "label": "us.anthropic.claude-haiku-4-5-20251001-v1_0@v1",
+  "model": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+  "promptVersion": "v1",
+  "devIds": [
+    "aspnetcore-pr-8",
+    "aspnetcore-pr-9",
+    "aspnetcore-pr-10",
+    "cal.com-pr-1",
+    "cal.com-pr-2"
+  ],
+  "runsPerInstance": 2,
+  "completed": 10,
+  "expected": 10,
+  "zeroFinding": 0,
+  "findingsPerRun": 5.3,
+  "strict": {
+    "p": 0.6055555555555557,
+    "r": 0.48888888888888893,
+    "f1": 0.526704014939309
+  }
+}

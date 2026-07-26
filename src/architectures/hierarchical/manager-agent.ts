@@ -95,12 +95,18 @@ export class ManagerAgent {
 
       this.transition("completed");
 
+      const maxSpecialistLatencyMs = specialistResults.reduce(
+        (max, r) => Math.max(max, r.latencyMs),
+        0,
+      );
       const metrics: HierarchicalMetrics = {
         specialistCount: specialistResults.length,
         llmCalls: specialistResults.length,
         messageCount: this.conversation.messages.length,
         duplicateCount: result.duplicateCount,
         mergeLatencyMs,
+        // One parallel round: slowest specialist + the deterministic merge.
+        criticalPathLatencyMs: maxSpecialistLatencyMs + mergeLatencyMs,
       };
       return { plan, result, metrics, conversation: this.conversation };
     } catch (error) {
@@ -113,18 +119,23 @@ export class ManagerAgent {
     plan: ReviewPlan,
     input: ReviewExecutionInput,
   ): Promise<SpecialistReviewResult[]> {
-    const results: SpecialistReviewResult[] = [];
+    // Specialists review the same input independently, so dispatch them in
+    // parallel: the topology has no data dependency between them. Request
+    // messages are recorded first and responses after (in plan order) so the
+    // conversation stays deterministic and messageCount is unchanged.
     for (const role of plan.specialists) {
-      const specialist = this.specialistFor(role);
       this.send("manager", role, "review-request", {
         snapshotId: input.snapshot.snapshotId,
       });
-      const result = await specialist.review(input);
-      this.send(role, "manager", "review-response", {
-        findingCount: result.findings.length,
-      });
-      results.push(result);
     }
+    const results = await Promise.all(
+      plan.specialists.map((role) => this.specialistFor(role).review(input)),
+    );
+    plan.specialists.forEach((role, i) => {
+      this.send(role, "manager", "review-response", {
+        findingCount: (results[i] as SpecialistReviewResult).findings.length,
+      });
+    });
     return results;
   }
 

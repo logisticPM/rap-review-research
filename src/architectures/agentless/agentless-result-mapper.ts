@@ -1,6 +1,8 @@
 import type { LLMReviewResponse } from "../../llm/models/llm-review-response.ts";
 import type { RawReviewResult } from "../../models/review-result.ts";
 
+import { isTruncatedStopReason } from "../../llm/models/llm-review-response.ts";
+
 /** Agentless makes exactly one LLM provider call per review. */
 export const AGENTLESS_LLM_CALLS = 1;
 
@@ -30,6 +32,7 @@ export function mapToRawReviewResult(
     estimatedCostUsd: response.estimatedCostUsd,
     messageCount: AGENTLESS_MESSAGE_COUNT,
     llmCalls: AGENTLESS_LLM_CALLS,
+    truncatedCallCount: isTruncatedStopReason(response.stopReason) ? 1 : 0,
   };
 }
 

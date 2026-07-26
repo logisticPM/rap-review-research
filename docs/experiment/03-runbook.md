@@ -741,6 +741,66 @@ Any change affecting benchmark outputs requires all affected experiments to be r
 
 ---
 
+# 22.1 Double Freeze Line
+
+The blanket freeze in §22 is stricter than necessary. Only the LLM calls are
+expensive and irreversible; everything downstream of them is deterministic and
+can be replayed offline **provided every raw LLM output and intermediate
+artifact is persisted** (see roadmap B1). The freeze is therefore split into two
+lines.
+
+**Generation-side freeze (irreversible — freeze before spending any budget):**
+
+- prompt templates and prompt version
+- Bedrock model id, temperature, top-p, max output tokens
+- review-architecture logic (anything that changes emitted findings, e.g. the
+  dedup predicate A4, the confidence aggregation B5, the finding schema A3)
+- benchmark datasets and the fixed benchmark subset
+
+A change here invalidates collected data and **requires rerunning** the affected
+experiments.
+
+**Evaluation-side (freely iterable after data collection, with a logged
+changelog):**
+
+- the matcher and semantic matcher (A2), including thresholds
+- the ground-truth matching algorithm (A1) and dedup-normalization (A5)
+- computed metrics and their formulas
+- export column derivations and additions
+
+Because these operate only on persisted artifacts, they can be re-run over the
+stored raw outputs at no additional LLM cost. Every evaluation-side change must
+be recorded (commit + dated note) so published numbers are reproducible.
+
+> Prerequisite: the evaluation-side freedom is valid **only** while B1
+> (persist all intermediate artifacts) holds. If any raw output is not stored,
+> the corresponding change reverts to generation-side and requires a rerun.
+
+---
+
+# 22.2 Gates
+
+Execution must clear these gates in order (full task detail in
+`docs/optimization/00-roadmap.md`).
+
+**G0 — Integrity & persistence (before ANY paid run):**
+
+- [ ] evaluator invariant/metamorphic tests pass (roadmap A6)
+- [ ] replay reproduces final findings from persisted intermediates with zero
+      LLM calls (roadmap B1)
+- [ ] stop reason (B2) and dual latency (B3) recorded on a mock run
+- [ ] `npm run check` green
+
+**G1 — Pilot & freeze (before the paper's dataset is collected):**
+
+- [ ] 5-PR pilot complete across all arms (labeled pre-freeze, excluded from
+      paper data)
+- [ ] cost projection within budget
+- [ ] prompts frozen and git-tagged (`prompt-freeze-v1`)
+- [ ] pre-registration timestamped before the frozen campaign begins
+
+---
+
 # 23. Reproducibility Checklist
 
 Every experiment should be reproducible using only the repository and this runbook.

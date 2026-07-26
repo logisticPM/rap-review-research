@@ -48,6 +48,8 @@ export function buildMetrics(
     },
     operationalCost: {
       latencyMs: 1200,
+      criticalPathLatencyMs: 1200,
+      truncatedCallCount: 0,
       inputTokens: 500,
       outputTokens: 250,
       estimatedCostUsd: 0.0123,

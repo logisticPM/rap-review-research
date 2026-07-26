@@ -12,10 +12,13 @@ import { createPRImportService } from "../src/services/snapshot/index.ts";
 import { createExperimentService } from "../src/services/experiment/index.ts";
 import { InMemorySnapshotRepository } from "../src/repositories/in-memory/in-memory-snapshot-repository.ts";
 import { InMemoryRawDiffStorage } from "../src/storage/in-memory/in-memory-raw-diff-storage.ts";
+import { InMemoryArtifactRepository } from "../src/storage/in-memory/in-memory-artifact-repository.ts";
+import { RepositoryArtifactRecorder } from "../src/storage/repository-artifact-recorder.ts";
 import { InMemoryArchitectureRegistry } from "../src/architectures/in-memory-architecture-registry.ts";
 import { AgentlessArchitecture } from "../src/architectures/agentless/agentless-architecture.ts";
 import { createHierarchicalArchitecture } from "../src/architectures/hierarchical/index.ts";
 import { createConsensusArchitecture } from "../src/architectures/consensus/index.ts";
+import { createGeneralistsArchitecture } from "../src/architectures/generalists/index.ts";
 import { PromptBuilder } from "../src/llm/prompts/prompt-builder.ts";
 import { PromptLoader } from "../src/llm/prompts/prompt-loader.ts";
 import { ContextBuilder } from "../src/llm/prompts/context-builder.ts";
@@ -103,15 +106,33 @@ export function buildBenchmarkPipeline() {
   });
   const provider = new MockProvider({ responder });
 
+  // Persist multi-agent intermediates so the deterministic synthesis is
+  // replayable offline (B1). Single-agent (agentless) runs produce none.
+  const artifacts = new InMemoryArtifactRepository();
+  const artifactRecorder = new RepositoryArtifactRecorder(artifacts);
+
   const registry = new InMemoryArchitectureRegistry();
   registry.register(
     new AgentlessArchitecture({ provider, promptBuilder, rawDiffStorage }),
   );
   registry.register(
-    createHierarchicalArchitecture({ provider, promptBuilder, rawDiffStorage }),
+    createHierarchicalArchitecture({
+      provider,
+      promptBuilder,
+      rawDiffStorage,
+      artifactRecorder,
+    }),
   );
   registry.register(
-    createConsensusArchitecture({ provider, promptBuilder, rawDiffStorage }),
+    createConsensusArchitecture({
+      provider,
+      promptBuilder,
+      rawDiffStorage,
+      artifactRecorder,
+    }),
+  );
+  registry.register(
+    createGeneralistsArchitecture({ provider, promptBuilder, rawDiffStorage }),
   );
 
   const importCtx = createPRImportService({ snapshots, rawDiffStorage });
@@ -121,5 +142,6 @@ export function buildBenchmarkPipeline() {
     importService: importCtx.service,
     experimentService: experimentCtx.service,
     storage: experimentCtx.storage,
+    artifacts,
   };
 }

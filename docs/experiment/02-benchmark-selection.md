@@ -1,5 +1,9 @@
 # 02 — Benchmark Selection
 
+> **⚠ Note.** The per-PR arm count is now four (the `generalists-3` control arm
+> was added). For the authoritative sample sizes and the four-arm ladder see
+> [`04-preregistration.md`](04-preregistration.md).
+
 **Document:** Benchmark Selection
 
 **Version:** 1.0

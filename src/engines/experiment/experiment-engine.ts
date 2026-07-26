@@ -244,7 +244,7 @@ export class ExperimentEngine implements IExperimentEngine {
       status: "failed",
       error: message,
     });
-    return { experimentId, status: "failed", reusedExisting: false };
+    return { experimentId, status: "failed", reusedExisting: false, error: message };
   }
 
   private buildExperimentRecord(

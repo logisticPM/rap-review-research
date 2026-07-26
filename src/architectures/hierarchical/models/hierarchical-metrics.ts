@@ -8,4 +8,10 @@ export interface HierarchicalMetrics {
   readonly messageCount: number;
   readonly duplicateCount: number;
   readonly mergeLatencyMs: number;
+  /**
+   * Wall-clock lower bound (B3): specialists run in one parallel round, so the
+   * critical path is the slowest specialist call plus the merge, not the sum of
+   * all specialist latencies.
+   */
+  readonly criticalPathLatencyMs: number;
 }

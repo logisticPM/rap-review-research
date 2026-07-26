@@ -50,6 +50,7 @@ function toRow(m: ExperimentMetrics): ArchitectureComparisonRow {
     },
     averageConfidence: m.reviewQuality.averageConfidence,
     evidenceScore: m.researchEvidence.evidenceScore,
+    architectureAgreement: m.researchEvidence.architectureAgreement,
     latencyMs: m.operationalCost.latencyMs,
     inputTokens: m.operationalCost.inputTokens,
     outputTokens: m.operationalCost.outputTokens,
@@ -68,13 +69,14 @@ function buildCharts(rows: ArchitectureComparisonRow[]): ComparisonChart[] {
     values,
   });
 
-  return [
+  const charts: ComparisonChart[] = [
     chart(
       "Finding Count",
       rows.map((r) => r.findingCount),
     ),
+    // Supporting heuristic — labelled as such so it is not read as correctness.
     chart(
-      "Evidence Score",
+      "Evidence Score (heuristic)",
       rows.map((r) => r.evidenceScore),
     ),
     chart(
@@ -98,4 +100,18 @@ function buildCharts(rows: ArchitectureComparisonRow[]): ComparisonChart[] {
       rows.map((r) => r.messageCount),
     ),
   ];
+
+  // Cross-architecture agreement (RAP Portal corroboration) — only when at least
+  // one architecture has a computable value, so the chart is never misleadingly
+  // all-zero on datasets where it does not apply.
+  if (rows.some((r) => r.architectureAgreement !== undefined)) {
+    charts.push(
+      chart(
+        "Architecture Agreement",
+        rows.map((r) => r.architectureAgreement ?? 0),
+      ),
+    );
+  }
+
+  return charts;
 }

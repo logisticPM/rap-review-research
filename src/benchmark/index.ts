@@ -45,12 +45,26 @@ export type {
 export { IssueMatcher } from "./matching/issue-matcher.ts";
 export type { ISemanticMatcher } from "./matching/semantic-matcher.ts";
 export { NoopSemanticMatcher } from "./matching/semantic-matcher.ts";
+export { maxBipartiteMatching } from "./matching/bipartite-matcher.ts";
+export type { JudgeConfig } from "./matching/judge-prompt.ts";
+export {
+  buildJudgePrompt,
+  parseJudgeScore,
+  DEFAULT_JUDGE_CONFIG,
+} from "./matching/judge-prompt.ts";
+export { pairKey, SemanticScoreCache } from "./matching/semantic-score-cache.ts";
+export { CachedSemanticMatcher } from "./matching/cached-semantic-matcher.ts";
+export { JudgeScorePrecomputer } from "./matching/judge-score-precomputer.ts";
 
 // Evaluation.
 export type { GroundTruthEvaluatorDependencies } from "./ground-truth-evaluator.ts";
 export { GroundTruthEvaluator } from "./ground-truth-evaluator.ts";
 export type { BenchmarkEvaluatorDependencies } from "./benchmark-evaluator.ts";
 export { BenchmarkEvaluator } from "./benchmark-evaluator.ts";
+
+// Resume (Phase 2 instance-level budget saver).
+export type { InstanceResumePlan } from "./resume-plan.ts";
+export { planInstanceResume } from "./resume-plan.ts";
 
 // Import + run.
 export type {

@@ -16,3 +16,15 @@ export const reviewResultInputSchema = z.object({
 });
 
 export type ReviewResultInput = z.infer<typeof reviewResultInputSchema>;
+
+/**
+ * Envelope schema for lenient validation: the top level must be well-formed (a
+ * string `summary` and a `findings` *array*), but each finding is validated
+ * individually so one malformed finding does not discard the whole review. See
+ * {@link SchemaValidator}.
+ */
+export const reviewResultEnvelopeSchema = z.object({
+  summary: z.string(),
+  riskLevel: z.string().optional(),
+  findings: z.array(z.unknown()),
+});

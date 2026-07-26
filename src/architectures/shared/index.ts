@@ -14,3 +14,5 @@ export type {
   ReviewSpecialistDependencies,
   SpecialistConfig,
 } from "./review-specialist.ts";
+export type { FindingDedupOptions, FindingLocus } from "./finding-dedup.ts";
+export { areDuplicateFindings } from "./finding-dedup.ts";

@@ -1,0 +1,24 @@
+{
+  "name": "SWE-PRBench (sample)",
+  "instances": [
+    {
+      "instance_id": "swe-1",
+      "title": "Cart total null-safety",
+      "patch": "diff --git a/src/cart.ts b/src/cart.ts\nindex ccccccc..ddddddd 100644\n--- a/src/cart.ts\n+++ b/src/cart.ts\n@@ -1,4 +1,6 @@\n export function total(items) {\n-  return items.reduce((a, b) => a + b.price, 0);\n+  if (!items) return 0;\n+  return items.reduce((a, b) => a + b.price, 0);\n }\n",
+      "review_comments": [
+        {
+          "comment_id": "swe-1-c1",
+          "path": "src/cart.ts",
+          "line": 2,
+          "body": "Guard against null items before calling reduce."
+        },
+        {
+          "comment_id": "swe-1-c2",
+          "path": "src/cart.ts",
+          "line": 3,
+          "body": "Consider currency rounding when summing prices to avoid float drift."
+        }
+      ]
+    }
+  ]
+}

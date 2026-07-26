@@ -13,7 +13,10 @@ export interface ArchitectureComparisonRow {
   readonly findingCount: number;
   readonly severityDistribution: SeverityDistribution;
   readonly averageConfidence: number;
+  /** Supporting heuristic (severity + confidence + volume), NOT correctness. */
   readonly evidenceScore: number;
+  /** Cross-architecture agreement (RAP Portal corroboration); absent when not computable. */
+  readonly architectureAgreement?: number;
   readonly latencyMs: number;
   readonly inputTokens: number;
   readonly outputTokens: number;

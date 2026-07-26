@@ -10,8 +10,18 @@ import { DatasetAdapterError } from "../benchmark/index.ts";
  * data, validation failures, parser/schema errors, and implementation bugs —
  * these are surfaced immediately rather than masked by retries.
  */
+// Bedrock throttling surfaces two token-limit messages with the SAME
+// ThrottlingException type but very different meaning once the error has been
+// flattened to a string (the provider's typed ProviderRateLimitError does not
+// survive the engine→executor→runner boundary):
+//   - "Too many tokens, please wait before trying again."          → per-minute
+//   - "Too many tokens per day, please wait before trying again."  → daily cap
+// The per-minute limit clears in seconds, so it is transient (retry + backoff).
+// The daily cap cannot be cleared by our capped 30s backoff, so it stays
+// terminal — failing fast surfaces the exhausted quota instead of burning every
+// retry attempt against a 24h window. The negative lookahead encodes that split.
 const TRANSIENT_PATTERN =
-  /timeout|timed out|throttl|temporar|unavailable|econnreset|econnrefused|rate limit|too many requests|\b429\b|\b503\b|\b500\b/i;
+  /timeout|timed out|throttl|temporar|unavailable|econnreset|econnrefused|rate limit|too many requests|too many tokens(?! per day)|\b429\b|\b503\b|\b500\b/i;
 
 export class RetryPolicy {
   /** Maximum attempts per run, including the first. Runbook caps this at 3. */

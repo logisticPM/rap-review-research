@@ -2,6 +2,8 @@ import type { ReviewFinding, SeverityLevel } from "../../models/finding.ts";
 import type { SpecialistReviewResult } from "./models/specialist-review-result.ts";
 import type { HierarchicalReviewResult } from "./models/hierarchical-review-result.ts";
 
+import { areDuplicateFindings } from "../shared/finding-dedup.ts";
+
 const SEVERITY_ORDER: Record<SeverityLevel, number> = {
   low: 0,
   medium: 1,
@@ -13,27 +15,35 @@ const SEVERITY_ORDER: Record<SeverityLevel, number> = {
  * Deterministically merges specialist findings into a single review.
  *
  * It performs NO further LLM review — it operates only on specialist outputs:
- * deduplicates by `file + line + title`, resolves conflicts (highest severity
- * wins, then highest confidence), counts duplicates, and generates a summary.
- * Pure and deterministic; never mutates inputs.
+ * deduplicates near-duplicates (same file, nearby line, similar title — see
+ * {@link areDuplicateFindings}), resolves conflicts (highest severity wins,
+ * then highest confidence), counts duplicates, and generates a summary. Pure
+ * and deterministic; never mutates inputs.
  */
 export class Synthesizer {
   public synthesize(
     specialistResults: SpecialistReviewResult[],
   ): HierarchicalReviewResult {
-    const byKey = new Map<string, ReviewFinding>();
+    const mergedFindings: ReviewFinding[] = [];
     let total = 0;
 
     for (const specialist of specialistResults) {
       for (const finding of specialist.findings) {
         total += 1;
-        const key = duplicateKey(finding);
-        const existing = byKey.get(key);
-        byKey.set(key, existing ? resolveConflict(existing, finding) : finding);
+        const index = mergedFindings.findIndex((existing) =>
+          areDuplicateFindings(existing, finding),
+        );
+        if (index === -1) {
+          mergedFindings.push(finding);
+        } else {
+          mergedFindings[index] = resolveConflict(
+            mergedFindings[index] as ReviewFinding,
+            finding,
+          );
+        }
       }
     }
 
-    const mergedFindings = [...byKey.values()];
     const duplicateCount = total - mergedFindings.length;
 
     return {
@@ -43,11 +53,6 @@ export class Synthesizer {
       duplicateCount,
     };
   }
-}
-
-/** Two findings are duplicates when they share file, line, and title. */
-function duplicateKey(finding: ReviewFinding): string {
-  return `${finding.file}|${finding.line}|${finding.title.trim().toLowerCase()}`;
 }
 
 /** Highest severity wins; ties broken by highest confidence; then keep existing. */

@@ -10,6 +10,7 @@ import type { Logger } from "../../shared/logger.ts";
 import type { ILLMProvider } from "../../llm/provider/llm-provider.ts";
 import type { PromptBuilder } from "../../llm/prompts/prompt-builder.ts";
 import type { RawDiffStorage } from "../../storage/raw-diff-storage.ts";
+import type { ReviewArtifactRecorder } from "../../storage/review-artifact-recorder.ts";
 import type { LLMConfig } from "../../config/llm.ts";
 import type { IConsensusSpecialist } from "./consensus-specialist.ts";
 import type { IConsensusProtocol } from "./protocols/consensus-protocol.ts";
@@ -28,6 +29,8 @@ export interface ConsensusArchitectureDependencies {
   readonly synthesizer?: ConsensusSynthesizer;
   readonly clock?: Clock;
   readonly logger?: Logger;
+  /** When set, the full intermediate result is persisted for replay (B1). */
+  readonly artifactRecorder?: ReviewArtifactRecorder;
 }
 
 /**
@@ -46,6 +49,7 @@ export class ConsensusArchitecture implements IReviewArchitecture {
   private readonly synthesizer: ConsensusSynthesizer;
   private readonly clock: Clock;
   private readonly logger: Logger;
+  private readonly artifactRecorder?: ReviewArtifactRecorder;
 
   public constructor(deps: ConsensusArchitectureDependencies) {
     this.specialists = deps.specialists;
@@ -53,6 +57,7 @@ export class ConsensusArchitecture implements IReviewArchitecture {
     this.synthesizer = deps.synthesizer ?? new ConsensusSynthesizer();
     this.clock = deps.clock ?? new SystemClock();
     this.logger = deps.logger ?? new NoopLogger();
+    this.artifactRecorder = deps.artifactRecorder;
   }
 
   public async execute(
@@ -66,6 +71,9 @@ export class ConsensusArchitecture implements IReviewArchitecture {
       logger: this.logger,
     });
     const { result } = await coordinator.run(input);
+    if (this.artifactRecorder) {
+      await this.artifactRecorder.recordConsensus(input.experimentId, result);
+    }
     return toRawReviewResult(result);
   }
 }
@@ -86,6 +94,8 @@ function toRawReviewResult(result: ConsensusReviewResult): RawReviewResult {
     inputTokens: metrics.inputTokens,
     outputTokens: metrics.outputTokens,
     latencyMs: metrics.latencyMs,
+    criticalPathLatencyMs: metrics.criticalPathLatencyMs,
+    truncatedCallCount: metrics.truncatedCallCount,
     estimatedCostUsd: metrics.estimatedCostUsd,
     messageCount: metrics.messageCount,
     llmCalls: metrics.llmCalls,
@@ -114,6 +124,7 @@ export function createConsensusArchitecture(deps: {
   clock?: Clock;
   logger?: Logger;
   protocol?: IConsensusProtocol;
+  artifactRecorder?: ReviewArtifactRecorder;
 }): ConsensusArchitecture {
   const specialistDeps = {
     provider: deps.provider,
@@ -131,5 +142,6 @@ export function createConsensusArchitecture(deps: {
     protocol: deps.protocol,
     clock: deps.clock,
     logger: deps.logger,
+    artifactRecorder: deps.artifactRecorder,
   });
 }

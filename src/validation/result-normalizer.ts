@@ -48,6 +48,7 @@ export class ResultNormalizer {
       category: this.normalizeCategory(finding.category, actions),
       file: finding.file,
       line: finding.line,
+      ...(finding.snippet !== undefined ? { snippet: finding.snippet } : {}),
       description: finding.description,
       recommendation: finding.recommendation,
       confidence: this.clampConfidence(finding.confidence, actions),

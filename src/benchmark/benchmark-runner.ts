@@ -85,6 +85,7 @@ export class BenchmarkRunner {
           architecture,
           producedFindings,
           groundTruth: instance.groundTruth,
+          rawDiff: instance.rawDiff,
         });
       }
     }

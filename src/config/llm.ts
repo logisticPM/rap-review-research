@@ -24,15 +24,17 @@ export interface ModelPricing {
 }
 
 /**
- * Default Bedrock model id. Overridable via `LLM_DEFAULT_MODEL`.
+ * Default Bedrock model id — the **frozen system under test** (`prompt-freeze-v1`,
+ * see `docs/experiment/05-freeze-manifest.md`). Overridable via `LLM_DEFAULT_MODEL`.
  *
- * This is a cross-region **inference profile** id (verified working in
- * us-east-1). Newer Claude Sonnet models are only invokable via a profile, not
- * a bare on-demand model id. Switch to another approved Sonnet (e.g.
- * `us.anthropic.claude-sonnet-4-6` or `us.anthropic.claude-sonnet-5`) via
- * `LLM_DEFAULT_MODEL`.
+ * Frozen to **Claude Haiku 4.5**: the pilot found the same qualitative
+ * conclusions as Claude Sonnet 4.5 at ~3x lower cost (pre-registration §4.2),
+ * decisive for the 140-PR × 4-arm × 3-run confirmatory campaign. Sonnet 4.5
+ * (`us.anthropic.claude-sonnet-4-5-20250929-v1:0`) is the robustness arm, run via
+ * `LLM_DEFAULT_MODEL`. All ids are cross-region inference profiles verified
+ * region-enabled (us-east-1) in the pilot.
  */
-const DEFAULT_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0";
+const DEFAULT_MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0";
 
 function numberFromEnv(name: string, fallback: number): number {
   const raw = process.env[name];

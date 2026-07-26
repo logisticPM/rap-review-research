@@ -17,17 +17,24 @@ export class MajorityVoteConsensusProtocol implements IConsensusProtocol {
     const { input, specialists, synthesizer } = session;
     const snapshotId = input.snapshot.snapshotId;
 
+    // Each round dispatches its specialists in parallel (they have no data
+    // dependency within a round); requests are recorded before responses in
+    // specialist order so the conversation stays deterministic and messageCount
+    // is unchanged. Rounds themselves remain sequential.
+
     // Round 1 — Independent review.
     session.transition("independent-review");
-    const independentResults: SpecialistReviewResult[] = [];
     for (const specialist of specialists) {
       session.send("coordinator", specialist.role, "review-request", { snapshotId });
-      const result = await specialist.review(input);
-      session.send(specialist.role, "coordinator", "review-response", {
-        findingCount: result.findings.length,
-      });
-      independentResults.push(result);
     }
+    const independentResults = await Promise.all(
+      specialists.map((s) => s.review(input)),
+    );
+    specialists.forEach((s, i) => {
+      session.send(s.role, "coordinator", "review-response", {
+        findingCount: (independentResults[i] as SpecialistReviewResult).findings.length,
+      });
+    });
 
     // Round 2 — Finding exchange (peer findings shared with every specialist).
     session.transition("exchange");
@@ -40,17 +47,19 @@ export class MajorityVoteConsensusProtocol implements IConsensusProtocol {
 
     // Round 3 — Revision.
     session.transition("revision");
-    const revisedResults: SpecialistReviewResult[] = [];
     for (const specialist of specialists) {
       session.send("coordinator", specialist.role, "revision-request", {
         peerFindingCount: peerFindings.length,
       });
-      const result = await specialist.revise(input, peerFindings);
-      session.send(specialist.role, "coordinator", "revision-response", {
-        findingCount: result.findings.length,
-      });
-      revisedResults.push(result);
     }
+    const revisedResults = await Promise.all(
+      specialists.map((s) => s.revise(input, peerFindings)),
+    );
+    specialists.forEach((s, i) => {
+      session.send(s.role, "coordinator", "revision-response", {
+        findingCount: (revisedResults[i] as SpecialistReviewResult).findings.length,
+      });
+    });
 
     // Candidate generation (deduplicated, before voting).
     const { candidates, duplicateCount } = synthesizer.generateCandidates(
@@ -60,32 +69,41 @@ export class MajorityVoteConsensusProtocol implements IConsensusProtocol {
 
     // Round 4 — Voting.
     session.transition("voting");
-    const votes: ReviewVote[] = [];
-    let voteInputTokens = 0;
-    let voteOutputTokens = 0;
-    let voteLatencyMs = 0;
-    let voteCostUsd = 0;
     for (const specialist of specialists) {
       session.send("coordinator", specialist.role, "vote-request", {
         candidateCount: candidates.length,
       });
-      const voteResult = await specialist.vote(input, candidates);
-      session.send(specialist.role, "coordinator", "vote-response", {
+    }
+    const voteResults = await Promise.all(
+      specialists.map((s) => s.vote(input, candidates)),
+    );
+    const votes: ReviewVote[] = [];
+    specialists.forEach((s, i) => {
+      const voteResult = voteResults[i] as (typeof voteResults)[number];
+      session.send(s.role, "coordinator", "vote-response", {
         voteCount: voteResult.votes.length,
       });
       votes.push(...voteResult.votes);
-      voteInputTokens += voteResult.inputTokens;
-      voteOutputTokens += voteResult.outputTokens;
-      voteLatencyMs += voteResult.latencyMs;
-      voteCostUsd += voteResult.estimatedCostUsd;
-    }
+    });
 
     // Aggregate LLM usage across every round (review + revision + voting).
-    const rounds = [...independentResults, ...revisedResults];
-    const inputTokens = rounds.reduce((s, r) => s + r.inputTokens, voteInputTokens);
-    const outputTokens = rounds.reduce((s, r) => s + r.outputTokens, voteOutputTokens);
-    const latencyMs = rounds.reduce((s, r) => s + r.latencyMs, voteLatencyMs);
-    const estimatedCostUsd = rounds.reduce((s, r) => s + r.estimatedCostUsd, voteCostUsd);
+    const allCalls = [...independentResults, ...revisedResults, ...voteResults];
+    const inputTokens = allCalls.reduce((s, r) => s + r.inputTokens, 0);
+    const outputTokens = allCalls.reduce((s, r) => s + r.outputTokens, 0);
+    const latencyMs = allCalls.reduce((s, r) => s + r.latencyMs, 0);
+    const estimatedCostUsd = allCalls.reduce((s, r) => s + r.estimatedCostUsd, 0);
+    // Critical path: three sequential rounds, each bounded by its slowest call.
+    const maxLatency = (results: readonly { latencyMs: number }[]): number =>
+      results.reduce((max, r) => Math.max(max, r.latencyMs), 0);
+    const criticalPathLatencyMs =
+      maxLatency(independentResults) +
+      maxLatency(revisedResults) +
+      maxLatency(voteResults);
+    const truncatedCallCount = [
+      ...independentResults,
+      ...revisedResults,
+      ...voteResults,
+    ].filter((r) => r.truncated).length;
 
     // Synthesis (deterministic majority rule; no LLM).
     session.transition("synthesizing");
@@ -104,6 +122,8 @@ export class MajorityVoteConsensusProtocol implements IConsensusProtocol {
       inputTokens,
       outputTokens,
       latencyMs,
+      criticalPathLatencyMs,
+      truncatedCallCount,
       estimatedCostUsd,
     });
   }

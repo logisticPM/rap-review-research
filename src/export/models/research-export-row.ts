@@ -17,15 +17,21 @@ export interface ResearchExportRow {
   readonly averageConfidence: number;
   readonly duplicateFindingCount: number;
   readonly latencyMs: number;
+  readonly criticalPathLatencyMs: number;
+  readonly truncatedCallCount: number;
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly estimatedCostUsd: number;
   readonly llmCalls: number;
   readonly messageCount: number;
+  /** Supporting heuristic (severity + confidence + volume), NOT correctness. */
   readonly evidenceScore: number;
   readonly architectureAgreement?: number;
   readonly acceptedFindingRate?: number;
   readonly laterFixRate?: number;
+  /** Industrial-verification corroboration signals (RAP Portal). */
+  readonly staticAnalysisAgreement?: number;
+  readonly llmJudgeValidation?: number;
 }
 
 /**
@@ -44,6 +50,8 @@ export const STABLE_COLUMNS: readonly (keyof ResearchExportRow)[] = [
   "averageConfidence",
   "duplicateFindingCount",
   "latencyMs",
+  "criticalPathLatencyMs",
+  "truncatedCallCount",
   "inputTokens",
   "outputTokens",
   "estimatedCostUsd",
@@ -53,6 +61,8 @@ export const STABLE_COLUMNS: readonly (keyof ResearchExportRow)[] = [
   "architectureAgreement",
   "acceptedFindingRate",
   "laterFixRate",
+  "staticAnalysisAgreement",
+  "llmJudgeValidation",
 ];
 
 /**
@@ -76,6 +86,8 @@ export function toResearchExportRows(
         averageConfidence: metrics.reviewQuality.averageConfidence,
         duplicateFindingCount: metrics.reviewQuality.duplicateFindingCount,
         latencyMs: metrics.operationalCost.latencyMs,
+        criticalPathLatencyMs: metrics.operationalCost.criticalPathLatencyMs,
+        truncatedCallCount: metrics.operationalCost.truncatedCallCount,
         inputTokens: metrics.operationalCost.inputTokens,
         outputTokens: metrics.operationalCost.outputTokens,
         estimatedCostUsd: metrics.operationalCost.estimatedCostUsd,
@@ -85,6 +97,8 @@ export function toResearchExportRows(
         architectureAgreement: metrics.researchEvidence.architectureAgreement,
         acceptedFindingRate: metrics.researchEvidence.acceptedFindingRate,
         laterFixRate: metrics.researchEvidence.laterFixRate,
+        staticAnalysisAgreement: metrics.researchEvidence.staticAnalysisAgreement,
+        llmJudgeValidation: metrics.researchEvidence.llmJudgeValidation,
       });
     }
   }

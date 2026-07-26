@@ -44,6 +44,7 @@ export class MockProvider implements ILLMProvider {
       outputTokens: overrides.outputTokens ?? 50,
       latencyMs: overrides.latencyMs ?? 5,
       estimatedCostUsd: overrides.estimatedCostUsd ?? 0,
+      stopReason: overrides.stopReason ?? "end_turn",
     };
   }
 }

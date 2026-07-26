@@ -13,6 +13,11 @@ export class CostMetricsCalculator {
     const source = result.validatedResult ?? result.rawResult;
     return {
       latencyMs: source?.latencyMs ?? 0,
+      // Fall back to the sum when a topology reports no critical path (e.g.
+      // single-call agentless), so the column is always populated.
+      criticalPathLatencyMs:
+        source?.criticalPathLatencyMs ?? source?.latencyMs ?? 0,
+      truncatedCallCount: source?.truncatedCallCount ?? 0,
       inputTokens: source?.inputTokens ?? 0,
       outputTokens: source?.outputTokens ?? 0,
       estimatedCostUsd: source?.estimatedCostUsd ?? 0,

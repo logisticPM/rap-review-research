@@ -13,7 +13,8 @@ export type AgentRole =
   | "coordinator"
   | "backend"
   | "frontend"
-  | "database";
+  | "database"
+  | "generalist";
 
 /**
  * Message types exchanged between agents. A superset covering both topologies:

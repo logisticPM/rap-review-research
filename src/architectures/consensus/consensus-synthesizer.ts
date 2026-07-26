@@ -10,6 +10,8 @@ import type {
 import type { ConsensusReviewResult } from "./models/consensus-review-result.ts";
 import type { ConsensusMetrics } from "./models/consensus-metrics.ts";
 
+import { areDuplicateFindings } from "../shared/finding-dedup.ts";
+
 const SEVERITY_ORDER: Record<SeverityLevel, number> = {
   low: 0,
   medium: 1,
@@ -34,6 +36,8 @@ export interface SynthesizeInput {
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly latencyMs: number;
+  readonly criticalPathLatencyMs: number;
+  readonly truncatedCallCount: number;
   readonly estimatedCostUsd: number;
 }
 
@@ -44,27 +48,29 @@ export interface SynthesizeInput {
  */
 export class ConsensusSynthesizer {
   /**
-   * Deduplicate Round-1 + revised findings into candidates (file+line+title).
-   * Highest severity/confidence wins; source ids and proposing roles accumulate.
+   * Deduplicate Round-1 + revised findings into candidates by near-duplicate
+   * matching (same file, nearby line, similar title — see
+   * {@link areDuplicateFindings}). Highest severity/confidence wins; source ids
+   * and proposing roles accumulate. Candidates keep discovery order so ids are
+   * stable.
    */
   public generateCandidates(
     independentResults: SpecialistReviewResult[],
     revisedResults: SpecialistReviewResult[],
   ): { candidates: CandidateFinding[]; duplicateCount: number } {
-    const byKey = new Map<string, CandidateAccumulator>();
-    const order: string[] = [];
+    const accumulators: CandidateAccumulator[] = [];
     let total = 0;
 
     const consume = (result: SpecialistReviewResult): void => {
       for (const finding of result.findings) {
         total += 1;
-        const key = duplicateKey(finding);
-        const existing = byKey.get(key);
-        if (!existing) {
-          order.push(key);
-          byKey.set(key, {
+        const index = accumulators.findIndex((acc) =>
+          areDuplicateFindings(acc.candidate, finding),
+        );
+        if (index === -1) {
+          accumulators.push({
             candidate: {
-              candidateId: `candidate-${order.length}`,
+              candidateId: `candidate-${accumulators.length + 1}`,
               sourceFindingIds: [finding.id],
               title: finding.title,
               severity: finding.severity,
@@ -78,7 +84,11 @@ export class ConsensusSynthesizer {
             confidence: finding.confidence,
           });
         } else {
-          byKey.set(key, mergeInto(existing, finding, result.role));
+          accumulators[index] = mergeInto(
+            accumulators[index] as CandidateAccumulator,
+            finding,
+            result.role,
+          );
         }
       }
     };
@@ -90,13 +100,7 @@ export class ConsensusSynthesizer {
       consume(result);
     }
 
-    const candidates = order.map((key) => {
-      const acc = byKey.get(key);
-      if (!acc) {
-        throw new Error(`missing candidate for key ${key}`);
-      }
-      return acc.candidate;
-    });
+    const candidates = accumulators.map((acc) => acc.candidate);
     return { candidates, duplicateCount: total - candidates.length };
   }
 
@@ -131,6 +135,7 @@ export class ConsensusSynthesizer {
     }
 
     const decisive = accepted + rejected;
+    const selfVote = selfVoteStats(input.candidates, input.votes);
     const consensusMetrics: ConsensusMetrics = {
       specialistCount: input.specialistCount,
       candidateFindingCount: input.candidates.length,
@@ -139,6 +144,9 @@ export class ConsensusSynthesizer {
       needsReviewFindingCount: needsReview,
       voteCount: input.votes.length,
       agreementRate: input.candidates.length === 0 ? 0 : decisive / input.candidates.length,
+      selfVoteCount: selfVote.selfVoteCount,
+      selfAcceptRate: selfVote.selfAcceptRate,
+      otherAcceptRate: selfVote.otherAcceptRate,
       revisionCount: input.revisedResults.length,
       duplicateCount: input.duplicateCount,
       llmCalls: input.llmCalls,
@@ -146,6 +154,8 @@ export class ConsensusSynthesizer {
       inputTokens: input.inputTokens,
       outputTokens: input.outputTokens,
       latencyMs: input.latencyMs,
+      criticalPathLatencyMs: input.criticalPathLatencyMs,
+      truncatedCallCount: input.truncatedCallCount,
       estimatedCostUsd: input.estimatedCostUsd,
     };
 
@@ -163,10 +173,6 @@ export class ConsensusSynthesizer {
       consensusMetrics,
     };
   }
-}
-
-function duplicateKey(finding: ReviewFinding): string {
-  return `${finding.file}|${finding.line}|${finding.title.trim().toLowerCase()}`;
 }
 
 function mergeInto(
@@ -193,18 +199,75 @@ function mergeInto(
 
 function candidateConfidence(input: SynthesizeInput): Map<string, number> {
   const map = new Map<string, number>();
-  // Confidence of an accepted finding = mean confidence of its "accept" votes.
+  // Confidence of an accepted finding = net support across its votes:
+  // (sum of accept confidences - sum of reject confidences) / decisive votes.
+  // Reject votes now drag confidence down instead of being ignored, so a
+  // 2-accept/1-strong-reject finding is no longer as confident as 3-accept.
+  // "revise" abstains from the accept/reject axis and is excluded from both.
+  // Reduces to the old mean-of-accepts when there are no reject votes.
   for (const candidate of input.candidates) {
-    const acceptVotes = input.votes.filter(
-      (v) => v.findingId === candidate.candidateId && v.vote === "accept",
+    const votes = input.votes.filter(
+      (v) => v.findingId === candidate.candidateId,
     );
-    const mean =
-      acceptVotes.length === 0
-        ? 0
-        : acceptVotes.reduce((sum, v) => sum + v.confidence, 0) / acceptVotes.length;
-    map.set(candidate.candidateId, mean);
+    let net = 0;
+    let decisive = 0;
+    for (const vote of votes) {
+      if (vote.vote === "accept") {
+        net += vote.confidence;
+        decisive += 1;
+      } else if (vote.vote === "reject") {
+        net -= vote.confidence;
+        decisive += 1;
+      }
+    }
+    map.set(candidate.candidateId, decisive === 0 ? 0 : clamp01(net / decisive));
   }
   return map;
+}
+
+function clamp01(value: number): number {
+  if (Number.isNaN(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(1, value));
+}
+
+/**
+ * Self-preference stats: a vote is a "self vote" when its reviewer is among the
+ * roles that proposed the candidate. Returns the self-vote count and the accept
+ * rate among self votes vs. among other votes. Rates are 0 when the respective
+ * group is empty.
+ */
+function selfVoteStats(
+  candidates: CandidateFinding[],
+  votes: ReviewVote[],
+): { selfVoteCount: number; selfAcceptRate: number; otherAcceptRate: number } {
+  const proposersByCandidate = new Map<string, ReadonlySet<AgentRole>>(
+    candidates.map((c) => [c.candidateId, new Set(c.proposedBy)]),
+  );
+
+  let selfVotes = 0;
+  let selfAccepts = 0;
+  let otherVotes = 0;
+  let otherAccepts = 0;
+  for (const vote of votes) {
+    const proposers = proposersByCandidate.get(vote.findingId);
+    const isSelf = proposers?.has(vote.reviewer) ?? false;
+    const isAccept = vote.vote === "accept";
+    if (isSelf) {
+      selfVotes += 1;
+      if (isAccept) selfAccepts += 1;
+    } else {
+      otherVotes += 1;
+      if (isAccept) otherAccepts += 1;
+    }
+  }
+
+  return {
+    selfVoteCount: selfVotes,
+    selfAcceptRate: selfVotes === 0 ? 0 : selfAccepts / selfVotes,
+    otherAcceptRate: otherVotes === 0 ? 0 : otherAccepts / otherVotes,
+  };
 }
 
 function decide(

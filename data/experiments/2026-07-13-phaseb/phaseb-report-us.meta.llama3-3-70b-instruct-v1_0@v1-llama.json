@@ -1,0 +1,22 @@
+{
+  "label": "us.meta.llama3-3-70b-instruct-v1_0@v1-llama",
+  "model": "us.meta.llama3-3-70b-instruct-v1:0",
+  "promptVersion": "v1-llama",
+  "devIds": [
+    "aspnetcore-pr-8",
+    "aspnetcore-pr-9",
+    "aspnetcore-pr-10",
+    "cal.com-pr-1",
+    "cal.com-pr-2"
+  ],
+  "runsPerInstance": 2,
+  "completed": 10,
+  "expected": 10,
+  "zeroFinding": 6,
+  "findingsPerRun": 0.8,
+  "strict": {
+    "p": 0,
+    "r": 0,
+    "f1": 0
+  }
+}

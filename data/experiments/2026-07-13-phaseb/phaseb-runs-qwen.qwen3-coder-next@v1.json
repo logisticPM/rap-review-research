@@ -1,0 +1,1059 @@
+[
+ {
+  "runId": "aspnetcore-pr-8#agentless#1",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "aspnetcore-pr-8",
+  "snapshotId": "snap_001",
+  "experimentId": "snap_001#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Incorrect assignment of Remarks to Summary",
+    "severity": "high",
+    "category": "correctness",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "line": 382,
+    "description": "The code assigns methodComment.Remarks to operation.Summary instead of operation.Description. Remarks in XML comments should map to the OpenAPI description field, not summary.",
+    "recommendation": "Change `operation.Summary = remarks;` to `operation.Description = remarks;` to correctly map XML `<remarks>` to OpenAPI description.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-2",
+    "title": "Duplicate assignment of RequestBody.Description",
+    "severity": "medium",
+    "category": "maintainability",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "line": 463,
+    "description": "The code sets operation.RequestBody.Description = description twice in the same block (lines 463 and 479 in the diff), with the second assignment overwriting the first. This is redundant and may indicate a logic error or incomplete refactoring.",
+    "recommendation": "Remove the first assignment (line 463 in the diff) since the second assignment occurs after the example handling block.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-3",
+    "title": "Incorrect parameter name matching for request body properties",
+    "severity": "high",
+    "category": "correctness",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "line": 452,
+    "description": "The code uses `metadata.Name` instead of `propertyName` when looking up parameters. For request body properties, `metadata.Name` may not match the parameter name in the OpenAPI spec, leading to missed parameter descriptions.",
+    "recommendation": "Change `p.Name == metadata.Name` to `p.Name == propertyName` to correctly match parameters by their property name.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-4",
+    "title": "Missing null check in parameter lookup",
+    "severity": "medium",
+    "category": "correctness",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "line": 452,
+    "description": "The code accesses `operation.Parameters?.SingleOrDefault(...)` without verifying that operation.Parameters is not null before accessing it, which could lead to a NullReferenceException if operation.Parameters is null.",
+    "recommendation": "Add a null check for operation.Parameters before attempting to access it, or ensure the code path only executes when operation.Parameters is guaranteed to be non-null.",
+    "confidence": 0.9
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "aspnetcore-pr-8-gt-0",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "lineStart": 1,
+    "lineEnd": 1,
+    "category": "All C# Source Files Must Include MIT License Header",
+    "title": "Missing MIT license header",
+    "description": "The rule requires that every C# source file must start with the exact two-line MIT license header comment: '// Licensed to the .NET Foundation under one or more agreements.' followed by '// The .NET Foundation licenses this file to you under the MIT license.' This file is missing the required license header at the start."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-1",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "lineStart": 380,
+    "lineEnd": 383,
+    "title": "Remarks overwrite Summary instead of Description in XML comment transformation",
+    "description": "When XML remarks are present, they are incorrectly assigned to operation.Summary instead of operation.Description. This causes the remarks to overwrite the summary that was set earlier in the code (line 374). The XML documentation model distinguishes between summary (brief description) and remarks (detailed notes), and they should map to different OpenAPI fields. This bug causes the loss of the summary information when remarks are present, resulting in incorrect OpenAPI documentation where remarks replace the intended summary."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-2",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "lineStart": 449,
+    "lineEnd": 452,
+    "title": "Parameter lookup uses wrong identifier causing documentation mismatch",
+    "description": "The code searches for operation parameters using propertyName instead of metadata.Name, which causes a mismatch when the property name differs from the parameter name in the API metadata. The metadata.Name represents how the parameter is actually named in the OpenAPI operation, while propertyName is the original C# property name. Using propertyName will fail to find the correct parameter in cases where parameter naming conventions differ (e.g., camelCase in API vs PascalCase in C#), resulting in parameter descriptions not being applied correctly to the OpenAPI documentation."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-3",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "lineStart": 464,
+    "lineEnd": 479,
+    "title": "RequestBody description set after iteration may use stale or modified description value",
+    "description": "The operation.RequestBody.Description is now set after iterating through media types and parsing examples, instead of before. This reordering creates a potential race condition or state dependency issue where the description variable could be modified or cleared during the example parsing logic. Additionally, if parsing throws an exception or causes early termination, the description will never be set. The original code correctly set the description first to ensure it's always applied before potentially failing example operations. This bug can result in missing or incorrect request body descriptions in the OpenAPI specification."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-4",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/OperationTests.Controllers.cs",
+    "lineStart": 99,
+    "lineEnd": 143,
+    "category": "Test Methods Must Use Arrange-Act-Assert Pattern with Comments",
+    "title": "Test method missing Arrange/Act/Assert comments",
+    "description": "The new test method does not include the required '// Arrange', '// Act', and '// Assert' (or '// Act & Assert') comments to delineate phases per the AAA pattern."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-5",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/OperationTests.Controllers.cs",
+    "lineStart": 100,
+    "lineEnd": 100,
+    "category": "Async Methods Must Be Named with Async Suffix",
+    "title": "Async test method missing Async suffix",
+    "description": "This method returns Task and is marked async, but its name does not end with the required 'Async' suffix."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-6",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/snapshots/OperationTests.SupportsRouteParametersFromControllers#OpenApiXmlCommentSupport.generated.verified.cs",
+    "lineStart": 1,
+    "lineEnd": 9,
+    "category": "All C# Source Files Must Include MIT License Header",
+    "title": "New snapshot C# file missing MIT license header",
+    "description": "Rule requires every .cs file to start with the exact two-line .NET Foundation MIT license header. This newly added snapshot file begins with an auto-generated header instead."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-7",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/snapshots/OperationTests.SupportsRouteParametersFromControllers#OpenApiXmlCommentSupport.generated.verified.cs",
+    "lineStart": 13,
+    "lineEnd": 44,
+    "category": "Use File-Scoped Namespace Declarations",
+    "title": "New snapshot uses block-scoped namespaces instead of file-scoped",
+    "description": "The file declares namespaces using block-scoped syntax with braces, violating the requirement to use file-scoped namespace declarations (ending with ';')."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-8",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/snapshots/OperationTests.SupportsRouteParametersFromControllers#OpenApiXmlCommentSupport.generated.verified.cs",
+    "lineStart": 80,
+    "lineEnd": 89,
+    "category": "Use ArgumentNullException Throw Helpers for Parameter Validation",
+    "title": "Manual null-check throws instead of using throw helper",
+    "description": "Null parameter validation is performed via an explicit null check and throw. The rule requires using throw helpers such as ArgumentNullException.ThrowIfNull(type)."
+   }
+  ]
+ },
+ {
+  "runId": "aspnetcore-pr-8#agentless#2",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "aspnetcore-pr-8",
+  "snapshotId": "snap_001",
+  "experimentId": "snap_001#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1#rerun-1",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Incorrect assignment of remarks to operation.Description",
+    "severity": "critical",
+    "category": "correctness",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "line": 382,
+    "description": "The code assigns `remarks` to `operation.Description` instead of `operation.Summary`, overwriting any previous description and misplacing the remarks content.",
+    "recommendation": "Change `operation.Description = remarks;` to `operation.Summary = remarks;` to correctly map XML `<remarks>` to the OpenAPI summary field.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-2",
+    "title": "Redundant and misplaced assignment of RequestBody.Description",
+    "severity": "medium",
+    "category": "maintainability",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "line": 476,
+    "description": "The code sets `operation.RequestBody.Description = description;` twice — once before the `if` block (now removed in diff) and again inside — and the second assignment is placed after a `continue` statement, making the first assignment redundant and the second potentially unreachable.",
+    "recommendation": "Remove the redundant assignment and ensure the description is set only once before the `continue` or restructure the logic to avoid duplication.",
+    "confidence": 0.95
+   },
+   {
+    "id": "finding-3",
+    "title": "Incorrect parameter name lookup in property comment handling",
+    "severity": "medium",
+    "category": "correctness",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "line": 450,
+    "description": "The code uses `metadata.Name` instead of `propertyName` to find the operation parameter, which may not match the actual parameter name in the OpenAPI spec (e.g., route parameters like `{userId}` may have different metadata names).",
+    "recommendation": "Use `propertyName` consistently for parameter lookup, as done elsewhere in the method, to ensure correct matching of parameter documentation.",
+    "confidence": 0.9
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "aspnetcore-pr-8-gt-0",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "lineStart": 1,
+    "lineEnd": 1,
+    "category": "All C# Source Files Must Include MIT License Header",
+    "title": "Missing MIT license header",
+    "description": "The rule requires that every C# source file must start with the exact two-line MIT license header comment: '// Licensed to the .NET Foundation under one or more agreements.' followed by '// The .NET Foundation licenses this file to you under the MIT license.' This file is missing the required license header at the start."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-1",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "lineStart": 380,
+    "lineEnd": 383,
+    "title": "Remarks overwrite Summary instead of Description in XML comment transformation",
+    "description": "When XML remarks are present, they are incorrectly assigned to operation.Summary instead of operation.Description. This causes the remarks to overwrite the summary that was set earlier in the code (line 374). The XML documentation model distinguishes between summary (brief description) and remarks (detailed notes), and they should map to different OpenAPI fields. This bug causes the loss of the summary information when remarks are present, resulting in incorrect OpenAPI documentation where remarks replace the intended summary."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-2",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "lineStart": 449,
+    "lineEnd": 452,
+    "title": "Parameter lookup uses wrong identifier causing documentation mismatch",
+    "description": "The code searches for operation parameters using propertyName instead of metadata.Name, which causes a mismatch when the property name differs from the parameter name in the API metadata. The metadata.Name represents how the parameter is actually named in the OpenAPI operation, while propertyName is the original C# property name. Using propertyName will fail to find the correct parameter in cases where parameter naming conventions differ (e.g., camelCase in API vs PascalCase in C#), resulting in parameter descriptions not being applied correctly to the OpenAPI documentation."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-3",
+    "file": "src/OpenApi/gen/XmlCommentGenerator.Emitter.cs",
+    "lineStart": 464,
+    "lineEnd": 479,
+    "title": "RequestBody description set after iteration may use stale or modified description value",
+    "description": "The operation.RequestBody.Description is now set after iterating through media types and parsing examples, instead of before. This reordering creates a potential race condition or state dependency issue where the description variable could be modified or cleared during the example parsing logic. Additionally, if parsing throws an exception or causes early termination, the description will never be set. The original code correctly set the description first to ensure it's always applied before potentially failing example operations. This bug can result in missing or incorrect request body descriptions in the OpenAPI specification."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-4",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/OperationTests.Controllers.cs",
+    "lineStart": 99,
+    "lineEnd": 143,
+    "category": "Test Methods Must Use Arrange-Act-Assert Pattern with Comments",
+    "title": "Test method missing Arrange/Act/Assert comments",
+    "description": "The new test method does not include the required '// Arrange', '// Act', and '// Assert' (or '// Act & Assert') comments to delineate phases per the AAA pattern."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-5",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/OperationTests.Controllers.cs",
+    "lineStart": 100,
+    "lineEnd": 100,
+    "category": "Async Methods Must Be Named with Async Suffix",
+    "title": "Async test method missing Async suffix",
+    "description": "This method returns Task and is marked async, but its name does not end with the required 'Async' suffix."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-6",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/snapshots/OperationTests.SupportsRouteParametersFromControllers#OpenApiXmlCommentSupport.generated.verified.cs",
+    "lineStart": 1,
+    "lineEnd": 9,
+    "category": "All C# Source Files Must Include MIT License Header",
+    "title": "New snapshot C# file missing MIT license header",
+    "description": "Rule requires every .cs file to start with the exact two-line .NET Foundation MIT license header. This newly added snapshot file begins with an auto-generated header instead."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-7",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/snapshots/OperationTests.SupportsRouteParametersFromControllers#OpenApiXmlCommentSupport.generated.verified.cs",
+    "lineStart": 13,
+    "lineEnd": 44,
+    "category": "Use File-Scoped Namespace Declarations",
+    "title": "New snapshot uses block-scoped namespaces instead of file-scoped",
+    "description": "The file declares namespaces using block-scoped syntax with braces, violating the requirement to use file-scoped namespace declarations (ending with ';')."
+   },
+   {
+    "id": "aspnetcore-pr-8-gt-8",
+    "file": "src/OpenApi/test/Microsoft.AspNetCore.OpenApi.SourceGenerators.Tests/snapshots/OperationTests.SupportsRouteParametersFromControllers#OpenApiXmlCommentSupport.generated.verified.cs",
+    "lineStart": 80,
+    "lineEnd": 89,
+    "category": "Use ArgumentNullException Throw Helpers for Parameter Validation",
+    "title": "Manual null-check throws instead of using throw helper",
+    "description": "Null parameter validation is performed via an explicit null check and throw. The rule requires using throw helpers such as ArgumentNullException.ThrowIfNull(type)."
+   }
+  ]
+ },
+ {
+  "runId": "aspnetcore-pr-9#agentless#1",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "aspnetcore-pr-9",
+  "snapshotId": "snap_002",
+  "experimentId": "snap_002#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Quarantined test lacks clear justification in PR context",
+    "severity": "low",
+    "category": "maintainability",
+    "file": "src/Components/test/E2ETest/ServerExecutionTests/WebSocketCompressionTests.cs",
+    "line": 101,
+    "description": "A test is marked with [QuarantinedTest] pointing to issue #64305, but the PR description provides no context or confirmation that this quarantine is intentional or approved as part of this change. This may indicate incomplete test hygiene.",
+    "recommendation": "Ensure quarantined tests are explicitly reviewed and approved by the test ownership team, and consider adding a brief comment in the PR or commit message explaining why this quarantine is being introduced now.",
+    "confidence": 0.95
+   },
+   {
+    "id": "finding-2",
+    "title": "Hardcoded Xcode path may break on future macOS updates",
+    "severity": "medium",
+    "category": "maintainability",
+    "file": ".azure/pipelines/jobs/default-build.yml",
+    "line": 106,
+    "description": "The Xcode path is hardcoded to /Applications/Xcode_16.4.0.app/Contents/Developer. If the macOS image changes or Xcode is installed elsewhere, the pipeline will break.",
+    "recommendation": "Consider using xcode-select --print-path dynamically or referencing a more generic Xcode version pattern if possible, or document the expectation clearly.",
+    "confidence": 0.9
+   },
+   {
+    "id": "finding-3",
+    "title": "ValidateBaseline disabled without explanation",
+    "severity": "medium",
+    "category": "maintainability",
+    "file": "eng/Versions.props",
+    "line": 12,
+    "description": "ValidateBaseline is set to 'false' without comment. This may reduce confidence in version consistency across builds and could hide unintended dependency changes.",
+    "recommendation": "Add a comment explaining why baseline validation is disabled for this servicing update, or re-enable it if it was unintentional.",
+    "confidence": 0.95
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "aspnetcore-pr-9-gt-0",
+    "file": "src/Components/test/E2ETest/ServerExecutionTests/WebSocketCompressionTests.cs",
+    "lineStart": 16,
+    "lineEnd": 17,
+    "category": "Use File-Scoped Namespace Declarations",
+    "title": "Traditional namespace declaration used",
+    "description": "The rule requires C# files to use file-scoped namespace declarations (ending with semicolon without braces), but this file uses traditional namespace declarations with opening and closing braces."
+   },
+   {
+    "id": "aspnetcore-pr-9-gt-1",
+    "file": ".azure/pipelines/jobs/default-build.yml",
+    "lineStart": 165,
+    "lineEnd": 167,
+    "title": "XCode version mismatch with macOS image",
+    "description": "The build pipeline configures macOS-15 image but attempts to use XCode 15.2.0 instead of the required XCode 16.4.0. The display name shows 'Use XCode 16.4.0' but the actual command selects XCode 15.2.0. This mismatch will cause build failures on macOS-15 runners since XCode 15.2.0 is not available on macOS-15 images, only on macOS-13. The PR originally upgraded both the macOS image and XCode version together, but this bug breaks that pairing."
+   },
+   {
+    "id": "aspnetcore-pr-9-gt-2",
+    "file": "eng/Versions.props",
+    "lineStart": 22,
+    "lineEnd": 28,
+    "title": "Missing PreReleaseBrandingLabel for servicing builds",
+    "description": "The PreReleaseBrandingLabel configuration is missing the condition for 'servicing' builds. While the PreReleaseVersionLabel is set to 'servicing', there is no corresponding conditional assignment for PreReleaseBrandingLabel when PreReleaseVersionLabel equals 'servicing'. This means servicing builds will have an undefined or incorrect branding label, causing incorrect version strings in build outputs and package metadata. The original PR added this condition to properly support servicing releases."
+   },
+   {
+    "id": "aspnetcore-pr-9-gt-3",
+    "file": "eng/targets/ResolveReferences.targets",
+    "lineStart": 210,
+    "lineEnd": 213,
+    "title": "Inverted logic in servicing build validation",
+    "description": "The condition for servicing build validation has inverted logic - it triggers an error when AspNetCorePatchVersion equals '1' instead of when it does not equal '1'. This means the first servicing release (patch version 1) will incorrectly fail builds if package references changed, while subsequent servicing releases (patch version 2, 3, etc.) will incorrectly allow breaking changes to package references. The original intent was to allow package reference changes only for the first servicing release (version 10.0.1) but block them for later releases."
+   }
+  ]
+ },
+ {
+  "runId": "aspnetcore-pr-9#agentless#2",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "aspnetcore-pr-9",
+  "snapshotId": "snap_002",
+  "experimentId": "snap_002#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1#rerun-2",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Quarantined test without clear justification in PR context",
+    "severity": "low",
+    "category": "maintainability",
+    "file": "src/Components/test/E2ETest/ServerExecutionTests/WebSocketCompressionTests.cs",
+    "line": 101,
+    "description": "A test method is decorated with [QuarantinedTest] pointing to an external GitHub issue, but the PR description provides no context or confirmation that this quarantine is intentional or necessary for this change.",
+    "recommendation": "Ensure quarantined tests are explicitly acknowledged and justified in the PR description or comments, especially if the quarantine is new or unrelated to the version bump.",
+    "confidence": 0.9
+   },
+   {
+    "id": "finding-2",
+    "title": "Hardcoded Xcode path may break on future macOS updates",
+    "severity": "medium",
+    "category": "maintainability",
+    "file": ".azure/pipelines/jobs/default-build.yml",
+    "line": 106,
+    "description": "The Xcode path is hardcoded to Xcode_15.2.0.app but the displayName is updated to XCode 16.4.0, which is inconsistent and may cause build failures if the expected path does not exist.",
+    "recommendation": "Verify that /Applications/Xcode_16.4.0.app exists on macOS-15 agents or use a more robust mechanism (e.g., xcode-select -s /Applications/Xcode_16.4.0.app) and ensure the path matches the actual installed version.",
+    "confidence": 0.85
+   },
+   {
+    "id": "finding-3",
+    "title": "ValidateBaseline disabled without explanation",
+    "severity": "medium",
+    "category": "maintainability",
+    "file": "eng/Versions.props",
+    "line": 13,
+    "description": "ValidateBaseline is set to 'false' without comment or justification, which may reduce confidence in version consistency during servicing builds.",
+    "recommendation": "Add a comment explaining why baseline validation is disabled for this servicing update, or re-enable it if it was unintentionally disabled.",
+    "confidence": 0.95
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "aspnetcore-pr-9-gt-0",
+    "file": "src/Components/test/E2ETest/ServerExecutionTests/WebSocketCompressionTests.cs",
+    "lineStart": 16,
+    "lineEnd": 17,
+    "category": "Use File-Scoped Namespace Declarations",
+    "title": "Traditional namespace declaration used",
+    "description": "The rule requires C# files to use file-scoped namespace declarations (ending with semicolon without braces), but this file uses traditional namespace declarations with opening and closing braces."
+   },
+   {
+    "id": "aspnetcore-pr-9-gt-1",
+    "file": ".azure/pipelines/jobs/default-build.yml",
+    "lineStart": 165,
+    "lineEnd": 167,
+    "title": "XCode version mismatch with macOS image",
+    "description": "The build pipeline configures macOS-15 image but attempts to use XCode 15.2.0 instead of the required XCode 16.4.0. The display name shows 'Use XCode 16.4.0' but the actual command selects XCode 15.2.0. This mismatch will cause build failures on macOS-15 runners since XCode 15.2.0 is not available on macOS-15 images, only on macOS-13. The PR originally upgraded both the macOS image and XCode version together, but this bug breaks that pairing."
+   },
+   {
+    "id": "aspnetcore-pr-9-gt-2",
+    "file": "eng/Versions.props",
+    "lineStart": 22,
+    "lineEnd": 28,
+    "title": "Missing PreReleaseBrandingLabel for servicing builds",
+    "description": "The PreReleaseBrandingLabel configuration is missing the condition for 'servicing' builds. While the PreReleaseVersionLabel is set to 'servicing', there is no corresponding conditional assignment for PreReleaseBrandingLabel when PreReleaseVersionLabel equals 'servicing'. This means servicing builds will have an undefined or incorrect branding label, causing incorrect version strings in build outputs and package metadata. The original PR added this condition to properly support servicing releases."
+   },
+   {
+    "id": "aspnetcore-pr-9-gt-3",
+    "file": "eng/targets/ResolveReferences.targets",
+    "lineStart": 210,
+    "lineEnd": 213,
+    "title": "Inverted logic in servicing build validation",
+    "description": "The condition for servicing build validation has inverted logic - it triggers an error when AspNetCorePatchVersion equals '1' instead of when it does not equal '1'. This means the first servicing release (patch version 1) will incorrectly fail builds if package references changed, while subsequent servicing releases (patch version 2, 3, etc.) will incorrectly allow breaking changes to package references. The original intent was to allow package reference changes only for the first servicing release (version 10.0.1) but block them for later releases."
+   }
+  ]
+ },
+ {
+  "runId": "aspnetcore-pr-10#agentless#1",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "aspnetcore-pr-10",
+  "snapshotId": "snap_003",
+  "experimentId": "snap_003#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Incorrect output parameter initialization in TryGetValidatableTypeInfo",
+    "severity": "critical",
+    "category": "correctness",
+    "file": "src/Validation/src/ValidationOptions.cs",
+    "line": 55,
+    "description": "The line `validatableTypeInfo = null;` is placed before the resolver loop, which overwrites any value set by a successful resolver call. This means even if a resolver populates `validatableTypeInfo`, it will be reset to `null` before the method returns, causing the method to always return `false` and never return valid results.",
+    "recommendation": "Move the line `validatableTypeInfo = null;` to after the loop and only execute it if no resolver succeeded. Remove the initial assignment before the loop.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-2",
+    "title": "Invalid validation logic for RetainedFileCountLimit",
+    "severity": "high",
+    "category": "correctness",
+    "file": "src/Logging.AzureAppServices/src/AzureFileLoggerOptions.cs",
+    "line": 50,
+    "description": "The condition was changed from `if (value <= 0)` to `if (value < 0)`, which now allows `0` as a valid value. However, the documentation states the value must be strictly positive, and allowing zero would likely cause runtime issues (e.g., no files retained).",
+    "recommendation": "Revert the condition back to `if (value <= 0)` to enforce strictly positive values as intended.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-3",
+    "title": "Redundant semicolon in method signature",
+    "severity": "low",
+    "category": "maintainability",
+    "file": "src/Validation/src/ValidationOptions.cs",
+    "line": 65,
+    "description": "An extra semicolon appears at the end of the method signature for `TryGetValidatableParameterInfo`, which is syntactically incorrect in C# and will cause a compilation error.",
+    "recommendation": "Remove the trailing semicolon after the closing parenthesis of the method signature.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-4",
+    "title": "Inconsistent XML comment style for 'false'",
+    "severity": "low",
+    "category": "maintainability",
+    "file": "src/Validation/src/IValidatableInfoResolver.cs",
+    "line": 25,
+    "description": "The return value documentation for `TryGetValidatableTypeInfo` was changed from `<see langword=\"false\" />` to `false`, which is inconsistent with the rest of the codebase and standard XML documentation conventions.",
+    "recommendation": "Standardize return value documentation to use `<see langword=\"false\" />` for consistency.",
+    "confidence": 1
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "aspnetcore-pr-10-gt-0",
+    "file": "src/Validation/src/ValidationOptions.cs",
+    "lineStart": 66,
+    "lineEnd": 67,
+    "category": "Opening Braces Must Be on New Line (Allman Style)",
+    "title": "Method brace on same line",
+    "description": "The rule requires opening braces to appear on a new line after method declarations, but this method has its opening brace on the same line as the declaration (K&R style)."
+   },
+   {
+    "id": "aspnetcore-pr-10-gt-1",
+    "file": "src/Logging.AzureAppServices/src/BatchingLoggerOptions.cs",
+    "lineStart": 42,
+    "lineEnd": 53,
+    "title": "BackgroundQueueSize incorrectly rejects zero value despite 'non-negative' contract",
+    "description": "The BackgroundQueueSize property validation was changed to reject values less than or equal to zero, but the error message states 'must be non-negative' which includes zero. According to the XML documentation, null represents no limit. While zero is semantically different from null, the validation is now inconsistent with the documented contract that explicitly states 'non-negative' (which mathematically includes zero). This prevents callers from setting a zero queue size if that was their intent, even though zero is a valid non-negative integer. The validation logic contradicts the error message, creating a confusing API contract."
+   },
+   {
+    "id": "aspnetcore-pr-10-gt-2",
+    "file": "src/Logging.AzureAppServices/src/AzureFileLoggerOptions.cs",
+    "lineStart": 48,
+    "lineEnd": 59,
+    "title": "RetainedFileCountLimit allows zero value violating positive-only constraint",
+    "description": "The RetainedFileCountLimit property validation was changed from rejecting values <= 0 to only rejecting values < 0, which now allows zero as a valid value. However, both the XML documentation and the error message explicitly state that this must be a 'positive' value, and zero is not positive. The remarks indicate this controls maximum retained file count - a value of zero would mean no log files are retained, which could lead to complete log loss. This violates the documented API contract and creates a dangerous configuration scenario where all logs could be immediately discarded."
+   },
+   {
+    "id": "aspnetcore-pr-10-gt-3",
+    "file": "src/Validation/src/ValidationOptions.cs",
+    "lineStart": 44,
+    "lineEnd": 56,
+    "title": "Premature null assignment in TryGetValidatableTypeInfo violates out parameter semantics",
+    "description": "The validatableTypeInfo out parameter is now being set to null at the beginning of the method before iterating through resolvers, rather than after the loop when no resolver was found. While this may appear equivalent, it violates proper out parameter semantics and the contract implied by [NotNullWhen(true)]. If a resolver incorrectly returns true while leaving the out parameter unassigned or null (a buggy resolver implementation), the early null assignment would mask this contract violation. Additionally, this creates unnecessary assignment overhead since the parameter will be overwritten by successful resolvers. The original pattern of assigning null only when no resolver succeeds is more semantically correct and provides better detection of misbehaving resolvers."
+   },
+   {
+    "id": "aspnetcore-pr-10-gt-4",
+    "file": "src/Logging.AzureAppServices/src/AzureAppServicesLoggerFactoryExtensions.cs",
+    "lineStart": 21,
+    "lineEnd": 21,
+    "category": "Public APIs Must Have XML Documentation Comments",
+    "title": "Empty <returns> XML documentation on public method",
+    "description": "The public API method `AddAzureWebAppDiagnostics` includes a `<returns>` XML doc tag with no content. This results in incomplete XML documentation for a public API, violating the requirement that public APIs have complete XML documentation (including meaningful `<returns>` content when applicable)."
+   }
+  ]
+ },
+ {
+  "runId": "aspnetcore-pr-10#agentless#2",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "aspnetcore-pr-10",
+  "snapshotId": "snap_003",
+  "experimentId": "snap_003#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1#rerun-3",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Incorrect validation logic for RetainedFileCountLimit",
+    "severity": "high",
+    "category": "correctness",
+    "file": "src/Logging.AzureAppServices/src/AzureFileLoggerOptions.cs",
+    "line": 52,
+    "description": "The condition `if (value < 0)` allows zero to pass validation, but the documentation and earlier logic indicate that only strictly positive values should be allowed. This contradicts the intended behavior of rejecting zero.",
+    "recommendation": "Change the condition to `if (value <= 0)` to maintain consistency with the documented requirement that the value must be strictly positive.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-2",
+    "title": "Redundant initialization of output parameter",
+    "severity": "medium",
+    "category": "maintainability",
+    "file": "src/Validation/src/ValidationOptions.cs",
+    "line": 55,
+    "description": "The line `validatableTypeInfo = null;` appears twice in `TryGetValidatableTypeInfo`, which is redundant and could confuse maintainers.",
+    "recommendation": "Remove the first `validatableTypeInfo = null;` assignment (line 55) since the second one (line 61) is sufficient and placed after the loop.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-3",
+    "title": "Inconsistent spacing in method signature",
+    "severity": "low",
+    "category": "maintainability",
+    "file": "src/Validation/src/ValidationOptions.cs",
+    "line": 65,
+    "description": "The method signature for `TryGetValidatableParameterInfo` has an extra space before the opening brace (`} {`), which is inconsistent with standard C# formatting conventions.",
+    "recommendation": "Remove the extra space to align with common formatting standards (e.g., `} {` → `}{`).",
+    "confidence": 1
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "aspnetcore-pr-10-gt-0",
+    "file": "src/Validation/src/ValidationOptions.cs",
+    "lineStart": 66,
+    "lineEnd": 67,
+    "category": "Opening Braces Must Be on New Line (Allman Style)",
+    "title": "Method brace on same line",
+    "description": "The rule requires opening braces to appear on a new line after method declarations, but this method has its opening brace on the same line as the declaration (K&R style)."
+   },
+   {
+    "id": "aspnetcore-pr-10-gt-1",
+    "file": "src/Logging.AzureAppServices/src/BatchingLoggerOptions.cs",
+    "lineStart": 42,
+    "lineEnd": 53,
+    "title": "BackgroundQueueSize incorrectly rejects zero value despite 'non-negative' contract",
+    "description": "The BackgroundQueueSize property validation was changed to reject values less than or equal to zero, but the error message states 'must be non-negative' which includes zero. According to the XML documentation, null represents no limit. While zero is semantically different from null, the validation is now inconsistent with the documented contract that explicitly states 'non-negative' (which mathematically includes zero). This prevents callers from setting a zero queue size if that was their intent, even though zero is a valid non-negative integer. The validation logic contradicts the error message, creating a confusing API contract."
+   },
+   {
+    "id": "aspnetcore-pr-10-gt-2",
+    "file": "src/Logging.AzureAppServices/src/AzureFileLoggerOptions.cs",
+    "lineStart": 48,
+    "lineEnd": 59,
+    "title": "RetainedFileCountLimit allows zero value violating positive-only constraint",
+    "description": "The RetainedFileCountLimit property validation was changed from rejecting values <= 0 to only rejecting values < 0, which now allows zero as a valid value. However, both the XML documentation and the error message explicitly state that this must be a 'positive' value, and zero is not positive. The remarks indicate this controls maximum retained file count - a value of zero would mean no log files are retained, which could lead to complete log loss. This violates the documented API contract and creates a dangerous configuration scenario where all logs could be immediately discarded."
+   },
+   {
+    "id": "aspnetcore-pr-10-gt-3",
+    "file": "src/Validation/src/ValidationOptions.cs",
+    "lineStart": 44,
+    "lineEnd": 56,
+    "title": "Premature null assignment in TryGetValidatableTypeInfo violates out parameter semantics",
+    "description": "The validatableTypeInfo out parameter is now being set to null at the beginning of the method before iterating through resolvers, rather than after the loop when no resolver was found. While this may appear equivalent, it violates proper out parameter semantics and the contract implied by [NotNullWhen(true)]. If a resolver incorrectly returns true while leaving the out parameter unassigned or null (a buggy resolver implementation), the early null assignment would mask this contract violation. Additionally, this creates unnecessary assignment overhead since the parameter will be overwritten by successful resolvers. The original pattern of assigning null only when no resolver succeeds is more semantically correct and provides better detection of misbehaving resolvers."
+   },
+   {
+    "id": "aspnetcore-pr-10-gt-4",
+    "file": "src/Logging.AzureAppServices/src/AzureAppServicesLoggerFactoryExtensions.cs",
+    "lineStart": 21,
+    "lineEnd": 21,
+    "category": "Public APIs Must Have XML Documentation Comments",
+    "title": "Empty <returns> XML documentation on public method",
+    "description": "The public API method `AddAzureWebAppDiagnostics` includes a `<returns>` XML doc tag with no content. This results in incomplete XML documentation for a public API, violating the requirement that public APIs have complete XML documentation (including meaningful `<returns>` content when applicable)."
+   }
+  ]
+ },
+ {
+  "runId": "cal.com-pr-1#agentless#1",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "cal.com-pr-1",
+  "snapshotId": "snap_004",
+  "experimentId": "snap_004#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Incorrect orgId filtering in PBAC permissions query",
+    "severity": "high",
+    "category": "correctness",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "line": 280,
+    "description": "The orgId filter condition `(${orgId}::bigint IS NULL OR t.\"id\" = ${orgId} OR t.\"parentId\" = ${orgId})` incorrectly allows teams where the user has PBAC permissions to be returned even when they are not under the specified orgId. This could lead to privilege escalation by returning teams outside the intended org scope.",
+    "recommendation": "Change the condition to `(${orgId}::bigint IS NULL OR t.\"parentId\" = ${orgId} OR (t.\"id\" = ${orgId} AND t.\"isOrganization\" = true))` to ensure only teams directly under the org or the org itself are included when orgId is provided.",
+    "confidence": 0.9
+   },
+   {
+    "id": "finding-2",
+    "title": "Incorrect orgId filtering in fallback roles query",
+    "severity": "high",
+    "category": "correctness",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "line": 346,
+    "description": "The orgId filter for fallback roles uses `(${orgId}::bigint IS NULL OR t.\"id\" = ${orgId} OR t.\"parentId\" = ${orgId})` which has the same correctness issue as the PBAC permissions query. It may return teams outside the intended org scope.",
+    "recommendation": "Apply the same fix as for PBAC permissions: ensure only teams directly under the org or the org itself are included when orgId is provided.",
+    "confidence": 0.9
+   },
+   {
+    "id": "finding-3",
+    "title": "Incorrect orgId filtering in child team PBAC query",
+    "severity": "high",
+    "category": "correctness",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "line": 309,
+    "description": "The orgId filter for child teams in the PBAC permissions query uses `(${orgId}::bigint IS NULL OR org.\"id\" = ${orgId} OR child.\"id\" = ${orgId})` which incorrectly allows child teams to be returned even when they are not under the specified orgId.",
+    "recommendation": "Change to `(${orgId}::bigint IS NULL OR org.\"id\" = ${orgId} OR (child.\"parentId\" = ${orgId} AND org.\"id\" = ${orgId}))` to ensure only child teams under the specified org are included.",
+    "confidence": 0.9
+   },
+   {
+    "id": "finding-4",
+    "title": "Incorrect orgId filtering in child team fallback roles query",
+    "severity": "high",
+    "category": "correctness",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "line": 357,
+    "description": "The orgId filter for child teams in the fallback roles query uses `(${orgId}::bigint IS NULL OR org.\"id\" = ${orgId} OR child.\"id\" = ${orgId} OR child.\"parentId\" = ${orgId})` which incorrectly allows child teams to be returned even when they are not under the specified orgId.",
+    "recommendation": "Change to `(${orgId}::bigint IS NULL OR org.\"id\" = ${orgId} OR (child.\"parentId\" = ${orgId} AND org.\"id\" = ${orgId}))` to ensure only child teams under the specified org are included.",
+    "confidence": 0.9
+   },
+   {
+    "id": "finding-5",
+    "title": "Critical bug in isCurrentUser check",
+    "severity": "critical",
+    "category": "correctness",
+    "file": "packages/trpc/server/routers/viewer/bookings/get.handler.ts",
+    "line": 127,
+    "description": "The `isCurrentUser` check uses `filters.userIds.includes(user.id)` instead of checking if the user.id is the only ID in the list. This could allow a user to access bookings of other users if they include their own ID in a list of userIds they don't have permission to access.",
+    "recommendation": "Change to `filters.userIds.length === 1 && filters.userIds[0] === user.id` to ensure only the current user's own bookings are accessible without permission checks.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-6",
+    "title": "Missing orgId scoping in booking handler permission check",
+    "severity": "medium",
+    "category": "correctness",
+    "file": "packages/trpc/server/routers/viewer/bookings/get.handler.ts",
+    "line": 119,
+    "description": "The permission check service is called with `orgId: user.orgId ?? undefined`, but the service method signature expects `orgId?: number`. If user.orgId is null, it should be omitted entirely rather than passed as undefined to avoid potential type confusion.",
+    "recommendation": "Ensure the orgId is only passed when it's a valid number: `orgId: user.orgId || undefined` or refactor to avoid passing undefined.",
+    "confidence": 0.85
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "cal.com-pr-1-gt-0",
+    "file": "packages/features/pbac/services/permission-check.service.ts",
+    "lineStart": 1,
+    "lineEnd": 6,
+    "category": "Prevent Circular Dependencies Between Core Packages",
+    "title": "Features package imports from trpc",
+    "description": "The rule requires that the features package does not import from trpc, but permission-check.service.ts imports TRPCError from @trpc/server"
+   },
+   {
+    "id": "cal.com-pr-1-gt-1",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "lineStart": 211,
+    "lineEnd": 223,
+    "title": "orgId parameter not propagated in getTeamIdsWithPermission",
+    "description": "The method getTeamIdsWithPermission accepts an orgId parameter to scope permission checks to a specific organization, but it fails to pass this parameter to the underlying getTeamIdsWithPermissions method. This causes organization scoping to be ignored when checking single permissions, allowing users to potentially access teams from all organizations instead of only the specified one. The bug breaks the core security feature introduced in this PR where organization-scoped permission checks were meant to restrict access based on orgId."
+   },
+   {
+    "id": "cal.com-pr-1-gt-2",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "lineStart": 301,
+    "lineEnd": 309,
+    "title": "Incomplete orgId filtering in PBAC child team query",
+    "description": "In the SQL query for getTeamsWithPBACPermissions, the WHERE clause for child teams is missing a check for child.\"parentId\" = ${orgId}. The original PR added this condition to properly scope child teams when an orgId is provided, but this implementation only checks org.\"id\" and child.\"id\", missing the case where a child team's parent should match the orgId. This causes the query to incorrectly exclude child teams whose parentId matches the specified orgId, breaking the inheritance model where organization permissions should propagate to child teams."
+   },
+   {
+    "id": "cal.com-pr-1-gt-3",
+    "file": "packages/trpc/server/routers/viewer/bookings/get.handler.ts",
+    "lineStart": 143,
+    "lineEnd": 159,
+    "title": "Authorization bypass when filtering multiple userIds including current user",
+    "description": "The isCurrentUser check was changed from a strict equality check (filters.userIds.length === 1 && user.id === filters.userIds[0]) to a loose inclusion check (filters.userIds.includes(user.id)). This allows a user to bypass permission checks by including their own userId in a list alongside other userIds they don't have permission to access. For example, if a user requests bookings for [ownUserId, unauthorizedUserId], the check passes even though they lack permission for the unauthorized user, allowing them to access bookings they shouldn't see."
+   },
+   {
+    "id": "cal.com-pr-1-gt-4",
+    "file": "packages/features/pbac/services/permission-check.service.ts",
+    "lineStart": 1,
+    "lineEnd": 1,
+    "category": "Repository and Service Classes Must Follow Naming Conventions",
+    "title": "Service file uses forbidden `.service.ts` suffix",
+    "description": "Rule 1 forbids dot-suffix filenames like `.service.ts`. This service lives in `permission-check.service.ts` instead of a PascalCase `<Entity>Service.ts` filename matching the class name (e.g., `PermissionCheckService.ts`)."
+   },
+   {
+    "id": "cal.com-pr-1-gt-5",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "lineStart": 212,
+    "lineEnd": 212,
+    "category": "Repository and Service Classes Must Follow Naming Conventions",
+    "title": "Repository does not follow `Prisma<Entity>Repository` naming convention",
+    "description": "Rule 1 requires repository classes/files to follow the `Prisma<Entity>Repository.ts` pattern with matching exported class name. This repository is named `PermissionRepository` in `PermissionRepository.ts` (and not `PrismaPermissionRepository`)."
+   },
+   {
+    "id": "cal.com-pr-1-gt-6",
+    "file": "packages/features/pbac/infrastructure/repositories/__tests__/PermissionRepository.integration-test.ts",
+    "lineStart": 1060,
+    "lineEnd": 1060,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Line exceeds configured 110-character width",
+    "description": "Rule 3 requires Biome formatting with a 110 character line width. This newly added statement is formatted as a single long line exceeding that limit."
+   },
+   {
+    "id": "cal.com-pr-1-gt-7",
+    "file": "packages/trpc/server/routers/viewer/bookings/get.handler.ts",
+    "lineStart": 18,
+    "lineEnd": 18,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Import line exceeds configured 110-character width",
+    "description": "Rule 3 requires Biome formatting with a 110 character line width. This import line is long enough to exceed the configured limit and should be wrapped/formatted accordingly."
+   }
+  ]
+ },
+ {
+  "runId": "cal.com-pr-1#agentless#2",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "cal.com-pr-1",
+  "snapshotId": "snap_004",
+  "experimentId": "snap_004#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1#rerun-4",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Incorrect orgId filtering in getTeamsWithPBACPermissions",
+    "severity": "high",
+    "category": "correctness",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "line": 280,
+    "description": "The condition `AND (${orgId}::bigint IS NULL OR t.\"id\" = ${orgId} OR t.\"parentId\" = ${orgId})` incorrectly filters teams. When orgId is provided, it should include the org itself and its direct children, but the condition `t.\"id\" = ${orgId}` is redundant since the org itself is not a team with PBAC permissions in this context. More critically, the logic does not correctly handle nested organizations (orgs with parent orgs) and may exclude valid teams.",
+    "recommendation": "Revise the filtering logic to correctly include teams within the specified organization hierarchy. Consider using a recursive CTE or a more robust parent-child relationship check.",
+    "confidence": 0.9
+   },
+   {
+    "id": "finding-2",
+    "title": "Incorrect orgId filtering in getTeamsWithFallbackRoles",
+    "severity": "high",
+    "category": "correctness",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "line": 357,
+    "description": "The condition `AND (${orgId}::bigint IS NULL OR t.\"id\" = ${orgId} OR t.\"parentId\" = ${orgId})` has the same issues as in getTeamsWithPBACPermissions. Additionally, the second UNION branch has `OR child.\"parentId\" = ${orgId}` which may incorrectly include teams whose parent is the orgId, but the logic is inconsistent and may miss nested structures.",
+    "recommendation": "Standardize the orgId filtering logic across both methods and ensure correct handling of organization hierarchies.",
+    "confidence": 0.85
+   },
+   {
+    "id": "finding-3",
+    "title": "Security bypass in booking handler userIds filter",
+    "severity": "critical",
+    "category": "security",
+    "file": "packages/trpc/server/routers/viewer/bookings/get.handler.ts",
+    "line": 127,
+    "description": "The condition `const isCurrentUser = filters.userIds.includes(user.id);` and the subsequent logic allow access if the current user's ID is in the filter list, bypassing the permission check `areUserIdsWithinUserOrgOrTeam`. This means a user could potentially access bookings for any user ID if they include their own ID in the filter list, which is a critical security vulnerability.",
+    "recommendation": "Remove the special case for current user ID in the userIds filter and ensure all userIds in the filter are validated against the user's permission scope regardless of whether the current user's ID is included.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-4",
+    "title": "Missing validation for empty permissions array",
+    "severity": "medium",
+    "category": "correctness",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "line": 229,
+    "description": "The validation `if (permissions.length === 0)` prevents privilege escalation but does not handle the case where permissions is null or undefined, which could lead to runtime errors.",
+    "recommendation": "Add a check for null/undefined permissions array to prevent potential runtime errors.",
+    "confidence": 0.8
+   },
+   {
+    "id": "finding-5",
+    "title": "Inconsistent handling of orgId in getTeamIdsWithPermission",
+    "severity": "low",
+    "category": "maintainability",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "line": 215,
+    "description": "The method `getTeamIdsWithPermission` calls `getTeamIdsWithPermissions` but does not pass the `orgId` parameter, which is inconsistent with the interface definition and may lead to unexpected behavior.",
+    "recommendation": "Ensure `orgId` is passed to `getTeamIdsWithPermissions` in `getTeamIdsWithPermission`.",
+    "confidence": 0.95
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "cal.com-pr-1-gt-0",
+    "file": "packages/features/pbac/services/permission-check.service.ts",
+    "lineStart": 1,
+    "lineEnd": 6,
+    "category": "Prevent Circular Dependencies Between Core Packages",
+    "title": "Features package imports from trpc",
+    "description": "The rule requires that the features package does not import from trpc, but permission-check.service.ts imports TRPCError from @trpc/server"
+   },
+   {
+    "id": "cal.com-pr-1-gt-1",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "lineStart": 211,
+    "lineEnd": 223,
+    "title": "orgId parameter not propagated in getTeamIdsWithPermission",
+    "description": "The method getTeamIdsWithPermission accepts an orgId parameter to scope permission checks to a specific organization, but it fails to pass this parameter to the underlying getTeamIdsWithPermissions method. This causes organization scoping to be ignored when checking single permissions, allowing users to potentially access teams from all organizations instead of only the specified one. The bug breaks the core security feature introduced in this PR where organization-scoped permission checks were meant to restrict access based on orgId."
+   },
+   {
+    "id": "cal.com-pr-1-gt-2",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "lineStart": 301,
+    "lineEnd": 309,
+    "title": "Incomplete orgId filtering in PBAC child team query",
+    "description": "In the SQL query for getTeamsWithPBACPermissions, the WHERE clause for child teams is missing a check for child.\"parentId\" = ${orgId}. The original PR added this condition to properly scope child teams when an orgId is provided, but this implementation only checks org.\"id\" and child.\"id\", missing the case where a child team's parent should match the orgId. This causes the query to incorrectly exclude child teams whose parentId matches the specified orgId, breaking the inheritance model where organization permissions should propagate to child teams."
+   },
+   {
+    "id": "cal.com-pr-1-gt-3",
+    "file": "packages/trpc/server/routers/viewer/bookings/get.handler.ts",
+    "lineStart": 143,
+    "lineEnd": 159,
+    "title": "Authorization bypass when filtering multiple userIds including current user",
+    "description": "The isCurrentUser check was changed from a strict equality check (filters.userIds.length === 1 && user.id === filters.userIds[0]) to a loose inclusion check (filters.userIds.includes(user.id)). This allows a user to bypass permission checks by including their own userId in a list alongside other userIds they don't have permission to access. For example, if a user requests bookings for [ownUserId, unauthorizedUserId], the check passes even though they lack permission for the unauthorized user, allowing them to access bookings they shouldn't see."
+   },
+   {
+    "id": "cal.com-pr-1-gt-4",
+    "file": "packages/features/pbac/services/permission-check.service.ts",
+    "lineStart": 1,
+    "lineEnd": 1,
+    "category": "Repository and Service Classes Must Follow Naming Conventions",
+    "title": "Service file uses forbidden `.service.ts` suffix",
+    "description": "Rule 1 forbids dot-suffix filenames like `.service.ts`. This service lives in `permission-check.service.ts` instead of a PascalCase `<Entity>Service.ts` filename matching the class name (e.g., `PermissionCheckService.ts`)."
+   },
+   {
+    "id": "cal.com-pr-1-gt-5",
+    "file": "packages/features/pbac/infrastructure/repositories/PermissionRepository.ts",
+    "lineStart": 212,
+    "lineEnd": 212,
+    "category": "Repository and Service Classes Must Follow Naming Conventions",
+    "title": "Repository does not follow `Prisma<Entity>Repository` naming convention",
+    "description": "Rule 1 requires repository classes/files to follow the `Prisma<Entity>Repository.ts` pattern with matching exported class name. This repository is named `PermissionRepository` in `PermissionRepository.ts` (and not `PrismaPermissionRepository`)."
+   },
+   {
+    "id": "cal.com-pr-1-gt-6",
+    "file": "packages/features/pbac/infrastructure/repositories/__tests__/PermissionRepository.integration-test.ts",
+    "lineStart": 1060,
+    "lineEnd": 1060,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Line exceeds configured 110-character width",
+    "description": "Rule 3 requires Biome formatting with a 110 character line width. This newly added statement is formatted as a single long line exceeding that limit."
+   },
+   {
+    "id": "cal.com-pr-1-gt-7",
+    "file": "packages/trpc/server/routers/viewer/bookings/get.handler.ts",
+    "lineStart": 18,
+    "lineEnd": 18,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Import line exceeds configured 110-character width",
+    "description": "Rule 3 requires Biome formatting with a 110 character line width. This import line is long enough to exceed the configured limit and should be wrapped/formatted accordingly."
+   }
+  ]
+ },
+ {
+  "runId": "cal.com-pr-2#agentless#1",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "cal.com-pr-2",
+  "snapshotId": "snap_005",
+  "experimentId": "snap_005#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Incorrect logic in hasPendingInviteByUserId",
+    "severity": "critical",
+    "category": "correctness",
+    "file": "packages/features/membership/repositories/MembershipRepository.ts",
+    "line": 583,
+    "description": "The method `hasPendingInviteByUserId` checks for `accepted: true` but should check for `accepted: false` to correctly identify pending (unaccepted) invites. This bug will cause the onboarding redirect to happen for users who have accepted invites instead of those who have pending ones.",
+    "recommendation": "Change the where clause to `{ userId, accepted: false }` to match the intended behavior of checking for pending (unaccepted) invites.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-2",
+    "title": "Inconsistent import order in page.tsx",
+    "severity": "low",
+    "category": "maintainability",
+    "file": "apps/web/app/(use-page-wrapper)/onboarding/getting-started/page.tsx",
+    "line": 1,
+    "description": "The import order in the page.tsx file is inconsistent with the project's style (e.g., `@calcom` imports should be grouped together and sorted alphabetically). While not critical, it reduces readability and maintainability.",
+    "recommendation": "Reorder imports to follow a consistent style, e.g., standard library, then external packages, then internal imports, each group sorted alphabetically.",
+    "confidence": 0.9
+   },
+   {
+    "id": "finding-3",
+    "title": "Redundant cleanup in integration test",
+    "severity": "low",
+    "category": "maintainability",
+    "file": "packages/features/membership/repositories/MembershipRepository.integration-test.ts",
+    "line": 78,
+    "description": "In the first test case, the membership and user are manually deleted after the assertion, but the `afterEach` hook already calls `clearTestMemberships()`, which deletes memberships in `createdMembershipIds`. This manual deletion is redundant and could lead to confusion or errors if the list is not properly managed.",
+    "recommendation": "Remove the manual `prisma.membership.delete` and `prisma.user.delete` calls in the test cases since the `afterEach` hook handles cleanup. Ensure `createdMembershipIds` is populated before the test assertion.",
+    "confidence": 0.85
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "cal.com-pr-2-gt-0",
+    "file": "apps/web/app/(use-page-wrapper)/onboarding/getting-started/page.tsx",
+    "lineStart": 35,
+    "lineEnd": 35,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Single quotes instead of double quotes",
+    "description": "The rule requires using double quotes for all strings in TypeScript/JavaScript files, but single quotes were used for the empty string assignment."
+   },
+   {
+    "id": "cal.com-pr-2-gt-1",
+    "file": "packages/features/membership/repositories/MembershipRepository.ts",
+    "lineStart": 584,
+    "lineEnd": 595,
+    "title": "Logic inversion in hasPendingInviteByUserId method",
+    "description": "The hasPendingInviteByUserId method checks for accepted:true memberships instead of accepted:false (pending invites). This inverts the method's logic - it will return true when users have accepted team memberships rather than pending invites. This breaks the onboarding flow for users with team invites, causing users with accepted memberships to be redirected to personal onboarding instead of users with pending invites. The method name and its intended purpose clearly indicate it should check for pending (non-accepted) invites."
+   },
+   {
+    "id": "cal.com-pr-2-gt-2",
+    "file": "packages/features/auth/lib/onboardingUtils.ts",
+    "lineStart": 64,
+    "lineEnd": 74,
+    "title": "Incorrect conditional operator in onboarding redirect logic",
+    "description": "The conditional logic for redirecting users with pending invites uses OR (||) instead of AND (&&). This means users will be redirected to '/onboarding/personal/settings' if they have a pending invite OR if onboarding-v3 is enabled, rather than requiring both conditions. This breaks the normal onboarding flow - any user with onboarding-v3 enabled will be incorrectly redirected to personal settings regardless of whether they have pending invites. The intended behavior was to only redirect users who have both onboarding-v3 enabled AND a pending invite."
+   },
+   {
+    "id": "cal.com-pr-2-gt-3",
+    "file": "apps/web/app/(use-page-wrapper)/onboarding/getting-started/page.tsx",
+    "lineStart": 29,
+    "lineEnd": 29,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Line exceeds 110 character width",
+    "description": "Biome formatting requires a max line width of 110 characters. This newly added line appears to exceed that limit and should be wrapped across multiple lines."
+   },
+   {
+    "id": "cal.com-pr-2-gt-4",
+    "file": "packages/features/membership/repositories/MembershipRepository.ts",
+    "lineStart": 563,
+    "lineEnd": 563,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Line exceeds 110 character width",
+    "description": "Biome formatting requires a max line width of 110 characters. This reformatted method signature is on a single line and appears to exceed the configured line width; it should be wrapped."
+   }
+  ]
+ },
+ {
+  "runId": "cal.com-pr-2#agentless#2",
+  "datasetId": "qodo-pr-review-bench",
+  "instanceId": "cal.com-pr-2",
+  "snapshotId": "snap_005",
+  "experimentId": "snap_005#agentless#qwen.qwen3-coder-next#v1#workflow-v1#eval-v1#rerun-5",
+  "architecture": "agentless",
+  "producedFindings": [
+   {
+    "id": "finding-1",
+    "title": "Critical bug in hasPendingInviteByUserId logic",
+    "severity": "critical",
+    "category": "correctness",
+    "file": "packages/features/membership/repositories/MembershipRepository.ts",
+    "line": 583,
+    "description": "The method `hasPendingInviteByUserId` checks for `accepted: true` but should check for `accepted: false` to correctly identify pending (unaccepted) invites. This is the opposite of the intended behavior and will cause incorrect redirects.",
+    "recommendation": "Change the where clause to `accepted: false` to match the method name and intended purpose.",
+    "confidence": 1
+   },
+   {
+    "id": "finding-2",
+    "title": "Incorrect import order in page.tsx",
+    "severity": "low",
+    "category": "maintainability",
+    "file": "apps/web/app/(use-page-wrapper)/onboarding/getting-started/page.tsx",
+    "line": 1,
+    "description": "Imports are reordered in a way that breaks alphabetical grouping and consistency. The `getServerSession` import is placed before standard library imports, and the `_generateMetadata` import is moved after `redirect`, which is inconsistent with common conventions.",
+    "recommendation": "Reorder imports to follow a consistent convention (e.g., external libraries first, then internal, then relative imports, all in alphabetical order within groups).",
+    "confidence": 0.9
+   },
+   {
+    "id": "finding-3",
+    "title": "Flaky test logic due to team selection",
+    "severity": "medium",
+    "category": "correctness",
+    "file": "packages/features/membership/repositories/MembershipRepository.integration-test.ts",
+    "line": 135,
+    "description": "The test for mixed invites uses `team2.id` conditionally based on whether a second team exists. If no second team is found, the test skips creating the pending invite and asserts `false`, which may not be a reliable test of the method's behavior.",
+    "recommendation": "Ensure a second team is always created for this test case, or explicitly handle the case where no second team exists to avoid flaky assertions.",
+    "confidence": 0.85
+   }
+  ],
+  "groundTruth": [
+   {
+    "id": "cal.com-pr-2-gt-0",
+    "file": "apps/web/app/(use-page-wrapper)/onboarding/getting-started/page.tsx",
+    "lineStart": 35,
+    "lineEnd": 35,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Single quotes instead of double quotes",
+    "description": "The rule requires using double quotes for all strings in TypeScript/JavaScript files, but single quotes were used for the empty string assignment."
+   },
+   {
+    "id": "cal.com-pr-2-gt-1",
+    "file": "packages/features/membership/repositories/MembershipRepository.ts",
+    "lineStart": 584,
+    "lineEnd": 595,
+    "title": "Logic inversion in hasPendingInviteByUserId method",
+    "description": "The hasPendingInviteByUserId method checks for accepted:true memberships instead of accepted:false (pending invites). This inverts the method's logic - it will return true when users have accepted team memberships rather than pending invites. This breaks the onboarding flow for users with team invites, causing users with accepted memberships to be redirected to personal onboarding instead of users with pending invites. The method name and its intended purpose clearly indicate it should check for pending (non-accepted) invites."
+   },
+   {
+    "id": "cal.com-pr-2-gt-2",
+    "file": "packages/features/auth/lib/onboardingUtils.ts",
+    "lineStart": 64,
+    "lineEnd": 74,
+    "title": "Incorrect conditional operator in onboarding redirect logic",
+    "description": "The conditional logic for redirecting users with pending invites uses OR (||) instead of AND (&&). This means users will be redirected to '/onboarding/personal/settings' if they have a pending invite OR if onboarding-v3 is enabled, rather than requiring both conditions. This breaks the normal onboarding flow - any user with onboarding-v3 enabled will be incorrectly redirected to personal settings regardless of whether they have pending invites. The intended behavior was to only redirect users who have both onboarding-v3 enabled AND a pending invite."
+   },
+   {
+    "id": "cal.com-pr-2-gt-3",
+    "file": "apps/web/app/(use-page-wrapper)/onboarding/getting-started/page.tsx",
+    "lineStart": 29,
+    "lineEnd": 29,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Line exceeds 110 character width",
+    "description": "Biome formatting requires a max line width of 110 characters. This newly added line appears to exceed that limit and should be wrapped across multiple lines."
+   },
+   {
+    "id": "cal.com-pr-2-gt-4",
+    "file": "packages/features/membership/repositories/MembershipRepository.ts",
+    "lineStart": 563,
+    "lineEnd": 563,
+    "category": "Use Biome for Code Formatting with Standardized Configuration",
+    "title": "Line exceeds 110 character width",
+    "description": "Biome formatting requires a max line width of 110 characters. This reformatted method signature is on a single line and appears to exceed the configured line width; it should be wrapped."
+   }
+  ]
+ }
+]

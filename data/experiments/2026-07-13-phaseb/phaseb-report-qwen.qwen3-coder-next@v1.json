@@ -1,0 +1,22 @@
+{
+  "label": "qwen.qwen3-coder-next@v1",
+  "model": "qwen.qwen3-coder-next",
+  "promptVersion": "v1",
+  "devIds": [
+    "aspnetcore-pr-8",
+    "aspnetcore-pr-9",
+    "aspnetcore-pr-10",
+    "cal.com-pr-1",
+    "cal.com-pr-2"
+  ],
+  "runsPerInstance": 2,
+  "completed": 10,
+  "expected": 10,
+  "zeroFinding": 0,
+  "findingsPerRun": 3.7,
+  "strict": {
+    "p": 0.30333333333333334,
+    "r": 0.16055555555555556,
+    "f1": 0.20488400488400488
+  }
+}

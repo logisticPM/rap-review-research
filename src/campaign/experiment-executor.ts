@@ -96,9 +96,11 @@ export class ExperimentExecutor implements IExperimentExecutor {
     });
 
     if (result.status !== "completed") {
+      // Include the underlying error so RetryPolicy can classify transient
+      // failures (e.g. Bedrock throttling) as retryable rather than terminal.
       throw new BenchmarkRunError(
         `Experiment "${result.experimentId}" for ${instance.instanceId} (${architecture}) ` +
-          `ended in status "${result.status}".`,
+          `ended in status "${result.status}"${result.error ? `: ${result.error}` : ""}.`,
       );
     }
 

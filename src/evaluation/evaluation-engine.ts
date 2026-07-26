@@ -4,12 +4,18 @@ import type { ExperimentMetrics } from "./models/experiment-metrics.ts";
 import type { ExperimentComparison } from "./models/experiment-comparison.ts";
 import type { IEvidenceScorer } from "./scorers/evidence-scorer.ts";
 
+import type {
+  ArchitectureFindings,
+  IndustrialVerificationContext,
+} from "./industrial/index.ts";
+
 import { NoopLogger } from "../shared/logger.ts";
 import { FindingMetricsCalculator } from "./finding-metrics.ts";
 import { CostMetricsCalculator } from "./cost-metrics.ts";
 import { EvidenceMetricsCalculator } from "./evidence-metrics.ts";
 import { ComparisonEngine } from "./comparison-engine.ts";
 import { HeuristicEvidenceScorer } from "./scorers/heuristic-evidence-scorer.ts";
+import { IndustrialVerification } from "./industrial/index.ts";
 import { EvaluationError, MetricCalculationError } from "./evaluation-errors.ts";
 
 /**
@@ -20,6 +26,27 @@ export interface IEvaluationEngine {
   evaluate(result: StoredExperimentResult): ExperimentMetrics;
   /** Evaluate many experiments and group them into architecture comparisons. */
   evaluateBatch(results: StoredExperimentResult[]): ExperimentComparison[];
+  /**
+   * Evaluate ONE PR's architectures and augment each with industrial
+   * verification signals (RAP Portal case study). Additive: the base metrics are
+   * exactly {@link evaluate}'s, with `researchEvidence` extended by any
+   * computable corroboration signals. `results` must be the architectures for a
+   * single PR; `context` supplies optional external evidence for that PR.
+   */
+  evaluateIndustrial(
+    results: StoredExperimentResult[],
+    context?: IndustrialVerificationContext,
+  ): ExperimentMetrics[];
+  /**
+   * Like {@link evaluateBatch}, but groups results by PR and populates
+   * cross-architecture agreement within each group (plus any per-PR external
+   * evidence). Used by the comparison/export/workbench paths so agreement is
+   * surfaced without external data.
+   */
+  evaluateBatchIndustrial(
+    results: StoredExperimentResult[],
+    contextBySnapshotId?: Readonly<Record<string, IndustrialVerificationContext>>,
+  ): ExperimentComparison[];
 }
 
 export interface EvaluationEngineDependencies {
@@ -28,6 +55,8 @@ export interface EvaluationEngineDependencies {
   readonly findingCalculator?: FindingMetricsCalculator;
   readonly costCalculator?: CostMetricsCalculator;
   readonly comparisonEngine?: ComparisonEngine;
+  /** Industrial-verification facade (RAP Portal case study). Optional/additive. */
+  readonly industrialVerification?: IndustrialVerification;
   readonly logger?: Logger;
 }
 
@@ -44,6 +73,7 @@ export class EvaluationEngine implements IEvaluationEngine {
   private readonly costCalculator: CostMetricsCalculator;
   private readonly evidenceCalculator: EvidenceMetricsCalculator;
   private readonly comparisonEngine: ComparisonEngine;
+  private readonly industrialVerification: IndustrialVerification;
   private readonly logger: Logger;
 
   public constructor(deps: EvaluationEngineDependencies = {}) {
@@ -54,6 +84,8 @@ export class EvaluationEngine implements IEvaluationEngine {
       deps.evidenceScorer ?? new HeuristicEvidenceScorer(),
     );
     this.comparisonEngine = deps.comparisonEngine ?? new ComparisonEngine();
+    this.industrialVerification =
+      deps.industrialVerification ?? new IndustrialVerification();
     this.logger = deps.logger ?? new NoopLogger();
   }
 
@@ -98,6 +130,71 @@ export class EvaluationEngine implements IEvaluationEngine {
     return this.comparisonEngine.compare(metrics);
   }
 
+  public evaluateIndustrial(
+    results: StoredExperimentResult[],
+    context: IndustrialVerificationContext = {},
+  ): ExperimentMetrics[] {
+    const base = results.map((result) => this.evaluate(result));
+    const groups = this.toArchitectureFindings(results);
+    const signals = this.industrialVerification.verify(groups, context);
+
+    return base.map((metrics) => {
+      const extra = signals.get(metrics.architecture);
+      if (!extra) {
+        return metrics;
+      }
+      return {
+        ...metrics,
+        researchEvidence: { ...metrics.researchEvidence, ...extra },
+      };
+    });
+  }
+
+  public evaluateBatchIndustrial(
+    results: StoredExperimentResult[],
+    contextBySnapshotId: Readonly<
+      Record<string, IndustrialVerificationContext>
+    > = {},
+  ): ExperimentComparison[] {
+    // Group by PR snapshot so agreement is computed among an actual PR's
+    // architectures (mirrors ComparisonEngine's snapshot grouping).
+    const bySnapshot = new Map<string, StoredExperimentResult[]>();
+    for (const result of results) {
+      const key = snapshotIdOf(result.experimentId);
+      const bucket = bySnapshot.get(key);
+      if (bucket) {
+        bucket.push(result);
+      } else {
+        bySnapshot.set(key, [result]);
+      }
+    }
+
+    const metrics: ExperimentMetrics[] = [];
+    for (const [key, group] of bySnapshot) {
+      metrics.push(
+        ...this.evaluateIndustrial(group, contextBySnapshotId[key] ?? {}),
+      );
+    }
+    return this.comparisonEngine.compare(metrics);
+  }
+
+  /** Project stored results into per-architecture findings for verification. */
+  private toArchitectureFindings(
+    results: StoredExperimentResult[],
+  ): ArchitectureFindings[] {
+    const groups: ArchitectureFindings[] = [];
+    for (const result of results) {
+      const validated = result.validatedResult;
+      if (validated) {
+        groups.push({
+          architecture: validated.architecture,
+          findings: validated.findings,
+        });
+      }
+    }
+    return groups;
+  }
+
   /** Run one calculator, surfacing failures as a metric-scoped typed error. */
   private run<T>(
     metric: string,
@@ -113,6 +210,16 @@ export class EvaluationEngine implements IEvaluationEngine {
       );
     }
   }
+}
+
+/**
+ * The PR snapshot id is the segment before the first `#` of the experiment id
+ * (the RFC-01 idempotency key `snapshotId#architecture#…`). Mirrors
+ * ComparisonEngine's grouping so both agree on what "the same PR" means.
+ */
+function snapshotIdOf(experimentId: string): string {
+  const hash = experimentId.indexOf("#");
+  return hash === -1 ? experimentId : experimentId.slice(0, hash);
 }
 
 /**

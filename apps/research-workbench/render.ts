@@ -190,7 +190,8 @@ export function renderComparison(view: ArchitectureComparisonView): string {
       "High",
       "Critical",
       "Avg Confidence",
-      "Evidence",
+      "Evidence (heuristic)",
+      "Agreement",
       "Latency (ms)",
       "Input Tok",
       "Output Tok",
@@ -207,6 +208,7 @@ export function renderComparison(view: ArchitectureComparisonView): string {
       a.severityDistribution.critical,
       a.averageConfidence,
       a.evidenceScore,
+      a.architectureAgreement === undefined ? "—" : a.architectureAgreement,
       a.latencyMs,
       a.inputTokens,
       a.outputTokens,
@@ -251,7 +253,7 @@ export function renderMetrics(view: MetricsView): string {
     ["Critical", view.quality.severityDistribution.critical],
     ["Average confidence", view.quality.averageConfidence],
     ["Duplicate findings", view.quality.duplicateFindingCount],
-    ["Evidence score", view.quality.evidenceScore],
+    ["Evidence score (supporting heuristic)", view.quality.evidenceScore],
   ]);
   return `<p>Experiment <code>${escapeHtml(view.experimentId)}</code> · ${escapeHtml(view.architecture)}</p>
     <h2>Cost Analysis</h2>${cost}

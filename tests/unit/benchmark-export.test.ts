@@ -19,13 +19,16 @@ function result(overrides: Partial<BenchmarkResult> = {}): BenchmarkResult {
     architecture: "agentless",
     groundTruthCount: 2,
     producedCount: 3,
+    uniqueProducedCount: 2,
     truePositives: 1,
     falsePositives: 2,
     falseNegatives: 1,
     precision: 0.3333,
+    uniquePrecision: 0.5,
     recall: 0.5,
     f1: 0.4,
     localizationAccuracy: 1,
+    snippetLocalizationAccuracy: 1,
     ...overrides,
   };
 }

@@ -1,0 +1,22 @@
+{
+  "label": "mistral.devstral-2-123b@v1",
+  "model": "mistral.devstral-2-123b",
+  "promptVersion": "v1",
+  "devIds": [
+    "aspnetcore-pr-8",
+    "aspnetcore-pr-9",
+    "aspnetcore-pr-10",
+    "cal.com-pr-1",
+    "cal.com-pr-2"
+  ],
+  "runsPerInstance": 2,
+  "completed": 10,
+  "expected": 10,
+  "zeroFinding": 0,
+  "findingsPerRun": 3.2,
+  "strict": {
+    "p": 0.4,
+    "r": 0.1683333333333333,
+    "f1": 0.21639194139194143
+  }
+}

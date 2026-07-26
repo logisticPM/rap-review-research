@@ -13,3 +13,7 @@ npm-debug.log*
 # TypeScript build output (we run via native type stripping; no emit by default)
 dist/
 *.tsbuildinfo
+
+# Phase 2 unattended-driver run artifacts (runs/cache/markers/logs)
+phase2-results/
+phase2-results-selftest/

@@ -66,6 +66,42 @@ test("BackendReviewer builds a role prompt and returns a SpecialistReviewResult"
   assert.match(calls[0]?.systemPrompt ?? "", /Backend Reviewer/);
 });
 
+// Regression: specialists used to send NO JSON schema, so the model replied with
+// a Markdown review and parseSpecialistReview dropped every finding → 0 findings
+// for Hierarchical/Consensus on every run. The review round must now inject the
+// findings schema (the shape toReviewFinding requires) into the prompt.
+test("BackendReviewer injects the findings JSON schema into the review prompt", async () => {
+  const calls: LLMReviewRequest[] = [];
+  const rawDiffStorage = new InMemoryRawDiffStorage();
+  const snapshot = buildSnapshot();
+  await rawDiffStorage.saveRawDiff(snapshot.snapshotId, sampleDiff());
+
+  const reviewer = new BackendReviewer({
+    provider: new MockProvider({
+      response: { text: BACKEND_OUTPUT },
+      onReview: (req) => calls.push(req),
+    }),
+    promptBuilder: new PromptBuilder({ loader: new PromptLoader(), contextBuilder: new ContextBuilder() }),
+    rawDiffStorage,
+  });
+
+  await reviewer.review({
+    experimentId: "e",
+    snapshot,
+    modelVersion: "m",
+    promptVersion: "v1",
+    workflowVersion: "w1",
+  });
+
+  const request = calls[0];
+  assert.ok(request?.jsonSchema, "review request must carry a jsonSchema");
+  assert.match(request?.userPrompt ?? "", /Expected JSON schema/);
+  // The schema must advertise the fields toReviewFinding requires.
+  for (const field of ["findings", "recommendation", "confidence", "severity"]) {
+    assert.match(request?.userPrompt ?? "", new RegExp(field));
+  }
+});
+
 test("parseSpecialistReview handles fences and skips incomplete findings", () => {
   const fenced = "```json\n" + BACKEND_OUTPUT + "\n```";
   const parsed = parseSpecialistReview(fenced, "backend");

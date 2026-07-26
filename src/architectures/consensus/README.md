@@ -80,5 +80,9 @@ registry.register(createConsensusArchitecture({ provider, promptBuilder, rawDiff
 4. **PromptBuilder** gained an optional `additionalContext` (backward-compatible)
    to inject peer findings (revision) and candidates (voting); **MockProvider**
    gained an optional `responder` for per-prompt test responses.
-5. Consensus artifacts (session/votes/decisions/`ConsensusMetrics`) are produced
-   but not persisted — deferred until dashboard/replay needs it (RFC-06 unchanged).
+5. Consensus artifacts (independent/revised rounds, candidates, votes, decisions,
+   `ConsensusMetrics`) are persisted for offline replay when an optional
+   `artifactRecorder` is wired in (roadmap B1): `replayConsensusFindings` re-runs
+   the deterministic synthesis from the stored `ConsensusReviewResult` with zero
+   LLM calls. When no recorder is wired, nothing is persisted (behaviour
+   unchanged).

@@ -13,4 +13,6 @@ export interface SpecialistReviewResult {
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly estimatedCostUsd: number;
+  /** This call was cut off by the output-token cap (B2). Optional/defaults false. */
+  readonly truncated?: boolean;
 }

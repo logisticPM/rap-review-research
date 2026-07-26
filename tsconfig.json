@@ -43,6 +43,8 @@
     "scripts/benchmark-export.ts",
     "scripts/campaign-run.ts",
     "scripts/campaign-live.ts",
-    "scripts/smoke-bedrock.ts"
+    "scripts/smoke-bedrock.ts",
+    "scripts/benchmark-judge-eval.ts",
+    "scripts/benchmark-swe-eval.ts"
   ]
 }

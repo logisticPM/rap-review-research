@@ -140,13 +140,29 @@ test("rejects malformed JSON", async () => {
   );
 });
 
-test("rejects when a required finding field is missing", async () => {
+test("drops a malformed finding but keeps the valid ones (fairness)", async () => {
   const { recommendation, ...withoutRecommendation } = FINDING;
   void recommendation;
+  const result = await engine.validate(
+    rawWith(
+      JSON.stringify({ summary: "s", findings: [FINDING, withoutRecommendation] }),
+    ),
+  );
+  // The valid finding survives; the one missing `recommendation` is dropped —
+  // one bad finding must not discard the whole review (single-call fairness).
+  assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].title, FINDING.title);
+  assert.equal(result.validation.repaired, true);
+  assert.ok(
+    result.validation.repairActions.some((a) => a.includes("malformed finding")),
+  );
+});
+
+test("still rejects a structurally broken envelope", async () => {
   await assert.rejects(
     () =>
       engine.validate(
-        rawWith(JSON.stringify({ summary: "s", findings: [withoutRecommendation] })),
+        rawWith(JSON.stringify({ summary: "s", findings: "not-an-array" })),
       ),
     SchemaValidationError,
   );

@@ -86,13 +86,16 @@ function outcomeFor(input: ExecutionInput): ExecutionOutcome {
       architecture: input.architecture,
       groundTruthCount: 0,
       producedCount: 0,
+      uniqueProducedCount: 0,
       truePositives: 0,
       falsePositives: 0,
       falseNegatives: 0,
       precision: 0,
+      uniquePrecision: 0,
       recall: 0,
       f1: 0,
       localizationAccuracy: 0,
+      snippetLocalizationAccuracy: 0,
     },
     metrics: {} as ExperimentMetrics,
   };
@@ -115,6 +118,8 @@ const storage: IStorageEngine = {
 const evaluationEngine: IEvaluationEngine = {
   evaluate: () => ({}) as ExperimentMetrics,
   evaluateBatch: () => [],
+  evaluateIndustrial: () => [],
+  evaluateBatchIndustrial: () => [],
 };
 
 const exportService: IExportService = {
@@ -132,6 +137,7 @@ function baseDeps(executor: IExperimentExecutor): CampaignRunnerDependencies {
     exportService,
     executor,
     clock: new FixedClock(),
+    retryBackoffMs: 0, // no real waits in tests
   };
 }
 

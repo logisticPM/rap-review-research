@@ -4,9 +4,9 @@
  * Run with: `npm run campaign:live`
  *
  * Unlike `campaign:run` (MockProvider, sample fixtures), this executes real
- * Agentless/Hierarchical/Consensus reviews through Bedrock on a SMALL subset of
- * real dataset PRs — so you can validate the pipeline end-to-end before a full
- * campaign. It:
+ * Agentless/Generalists-3/Hierarchical/Consensus reviews through Bedrock on a
+ * SMALL subset of real dataset PRs — so you can validate the pipeline
+ * end-to-end before a full campaign. It:
  *   - uses the AWS SDK default credential provider chain (no keys in the repo),
  *   - reads real dataset files you provide (never downloads anything),
  *   - is NOT part of `npm run check` (it costs Bedrock inference and is
@@ -29,6 +29,7 @@ import { InMemorySnapshotRepository } from "../src/repositories/in-memory/in-mem
 import { InMemoryRawDiffStorage } from "../src/storage/in-memory/in-memory-raw-diff-storage.ts";
 import { InMemoryArchitectureRegistry } from "../src/architectures/in-memory-architecture-registry.ts";
 import { AgentlessArchitecture } from "../src/architectures/agentless/agentless-architecture.ts";
+import { createGeneralistsArchitecture } from "../src/architectures/generalists/index.ts";
 import { createHierarchicalArchitecture } from "../src/architectures/hierarchical/index.ts";
 import { createConsensusArchitecture } from "../src/architectures/consensus/index.ts";
 import { PromptBuilder } from "../src/llm/prompts/prompt-builder.ts";
@@ -68,8 +69,10 @@ if (datasets.length === 0) {
   process.exit(1);
 }
 
-// Real Bedrock provider (default AWS credential chain) shared by all three
-// architectures — only the communication topology differs (fairness policy).
+// Real Bedrock provider (default AWS credential chain) shared by all arms —
+// they differ only in how the same underlying model spends compute (agentless:
+// 1 call; generalists-3: N parallel samples merged; hierarchical/consensus:
+// multiple roles/rounds), not in the model itself (fairness policy).
 const provider = new BedrockProvider();
 const promptBuilder = new PromptBuilder({
   loader: new PromptLoader(),
@@ -80,6 +83,7 @@ const rawDiffStorage = new InMemoryRawDiffStorage();
 
 const registry = new InMemoryArchitectureRegistry();
 registry.register(new AgentlessArchitecture({ provider, promptBuilder, rawDiffStorage }));
+registry.register(createGeneralistsArchitecture({ provider, promptBuilder, rawDiffStorage }));
 registry.register(createHierarchicalArchitecture({ provider, promptBuilder, rawDiffStorage }));
 registry.register(createConsensusArchitecture({ provider, promptBuilder, rawDiffStorage }));
 
@@ -100,6 +104,11 @@ console.log(`  datasets: ${datasets.map((d) => `${d.source}(${d.instances.length
 
 const report = await runner.run(datasets, {
   campaignId: "campaign-live",
+  // The full test-time-compute ladder (one variable per rung). Passed
+  // explicitly because `generalists-3` is intentionally NOT in the global
+  // BENCHMARK_ARCHITECTURES default (opt-in); the runner would otherwise skip
+  // it even though it is registered above.
+  architectures: ["agentless", "generalists-3", "hierarchical", "consensus"],
   modelVersion: LLM_CONFIG.defaultModel,
   promptVersion: "v1",
   workflowVersion: "workflow-v1",

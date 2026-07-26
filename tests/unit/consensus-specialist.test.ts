@@ -85,6 +85,33 @@ test("revise injects peer findings and returns revised findings", async () => {
   assert.match(revisionCall?.userPrompt ?? "", /Peer findings/); // additionalContext injected
 });
 
+// Regression: the review and revision rounds must inject the findings JSON
+// schema (without it the model returns Markdown and every finding is dropped →
+// 0 findings). The voting round must NOT — its template embeds its own
+// { votes: [...] } shape, and a findings schema would fight it.
+test("review and revise inject the findings schema; vote does not", async () => {
+  const { specialist: s, input, calls } = await specialist();
+
+  await s.review(input);
+  const reviewCall = calls[calls.length - 1];
+  assert.ok(reviewCall?.jsonSchema, "review must carry a jsonSchema");
+  assert.match(reviewCall?.userPrompt ?? "", /Expected JSON schema/);
+
+  await s.revise(input, [
+    { id: "f1", title: "Peer", severity: "low", category: "x", file: "z.ts", line: 1, description: "d", recommendation: "r", confidence: 0.5 },
+  ]);
+  const reviseCall = calls[calls.length - 1];
+  assert.ok(reviseCall?.jsonSchema, "revise must carry a jsonSchema");
+  assert.match(reviseCall?.userPrompt ?? "", /Expected JSON schema/);
+
+  await s.vote(input, [
+    { candidateId: "candidate-1", sourceFindingIds: ["b1"], title: "T", severity: "high", category: "c", file: "a.ts", line: 1, description: "d", recommendation: "r", proposedBy: ["backend"] },
+  ]);
+  const voteCall = calls[calls.length - 1];
+  assert.equal(voteCall?.jsonSchema, undefined, "vote round must not inject a findings schema");
+  assert.doesNotMatch(voteCall?.userPrompt ?? "", /Expected JSON schema/);
+});
+
 test("vote parses votes and reports usage", async () => {
   const { specialist: s, input } = await specialist();
   const candidates: CandidateFinding[] = [

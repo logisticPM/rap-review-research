@@ -77,6 +77,24 @@ test("runs the deterministic state machine to completion", async () => {
   assert.equal(run.result.mergedFindings.length, 3);
 });
 
+test("critical-path latency is the slowest specialist, not the sum (B3)", async () => {
+  const latSpecialist = (role: AgentRole, latencyMs: number): IReviewSpecialist => ({
+    role,
+    async review(): Promise<SpecialistReviewResult> {
+      return { role, summary: "", findings: [], latencyMs, inputTokens: 1, outputTokens: 1, estimatedCostUsd: 0 };
+    },
+  });
+  const m = manager([
+    latSpecialist("backend", 100),
+    latSpecialist("frontend", 40),
+    latSpecialist("database", 10),
+  ]);
+  const run = await m.run(input());
+  // Sum would be 150; the parallel round's critical path is the slowest (100),
+  // plus a 0ms merge under FixedClock.
+  assert.equal(run.metrics.criticalPathLatencyMs, 100);
+});
+
 test("dispatches each specialist exactly once and records typed messages", async () => {
   let backendCalls = 0;
   const m = manager([

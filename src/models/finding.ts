@@ -35,6 +35,14 @@ export interface ReviewFinding {
   readonly file: string;
   /** Line number within the file. */
   readonly line: number;
+  /**
+   * The offending line(s) quoted verbatim from the diff (A3). LLMs count diff
+   * lines unreliably, so a snippet lets the evaluator re-anchor a finding to the
+   * right line by locating it in the hunk, making localization measure
+   * understanding rather than arithmetic. Optional: absent on older data and on
+   * models that omit it (matching then falls back to `line`).
+   */
+  readonly snippet?: string;
   /** Explanation of the issue. */
   readonly description: string;
   /** Suggested remediation. */

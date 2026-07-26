@@ -12,6 +12,22 @@ test("provider errors and transient messages are retryable", () => {
   assert.equal(policy.isTransient(new Error("ThrottlingException")), true);
   assert.equal(policy.isTransient(new Error("service temporarily unavailable")), true);
   assert.equal(policy.isTransient(new Error("HTTP 503")), true);
+  // Per-minute Bedrock token throttling clears in seconds → retryable.
+  assert.equal(
+    policy.isTransient(new Error("Too many tokens, please wait before trying again.")),
+    true,
+  );
+});
+
+test("the daily token cap is terminal, not retried against a 24h window", () => {
+  const policy = new RetryPolicy();
+  // "per day" is a daily quota — capped backoff can't clear it, so fail fast.
+  assert.equal(
+    policy.isTransient(
+      new Error("Too many tokens per day, please wait before trying again."),
+    ),
+    false,
+  );
 });
 
 test("validation, adapter, and generic errors are not retryable", () => {

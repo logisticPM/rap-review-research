@@ -1,5 +1,10 @@
 # 3. Experimental Design
 
+> **⚠ Superseded for the current design.** The independent variable is now four
+> architectures (a `generalists-3` compute-matched control was added), reframed
+> as a test-time-compute ladder. For the authoritative methodology see
+> [`../experiment/04-preregistration.md`](../experiment/04-preregistration.md).
+
 This chapter defines the experimental methodology implemented by the AI Code Review Experiment Platform.
 
 Unlike a conventional software system, the primary purpose of this platform is not to perform automated code review, but to execute controlled experiments comparing different multi-agent communication architectures.

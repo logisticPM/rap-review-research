@@ -56,6 +56,15 @@ export interface CampaignConfig {
   readonly architectures?: ReviewArchitecture[];
   /** Independent runs per (instance, architecture). Default: 1. */
   readonly runsPerInstance?: number;
+  /**
+   * Opt-in bounded concurrency for executing incomplete manifest entries.
+   * Default/undefined/1 preserves today's exact sequential behavior — entries
+   * run strictly one at a time, in manifest order. When set above 1, up to
+   * that many entries run concurrently through a worker-pool (order of
+   * completion is no longer deterministic, but the set of outcomes and final
+   * manifest are equivalent).
+   */
+  readonly maxConcurrency?: number;
   /** Timestamp stamped on exports (injected for determinism). */
   readonly generatedAt: string;
   readonly platformVersion?: string;
@@ -73,6 +82,12 @@ export interface CampaignRunnerDependencies {
   readonly benchmarkExporter?: BenchmarkCsvExporter;
   readonly exportService?: IExportService;
   readonly retryPolicy?: RetryPolicy;
+  /**
+   * Base backoff (ms) between retry attempts; the wait is exponential
+   * (`base · 2^(attempt-1)`, capped at 30s) so a Bedrock throttling window has
+   * time to clear before re-attempting. Default 2000; set 0 in tests.
+   */
+  readonly retryBackoffMs?: number;
   readonly reporter?: ProgressReporter;
   readonly manifestStore?: ManifestStore;
   readonly clock?: Clock;
@@ -116,6 +131,7 @@ export class CampaignRunner {
   private readonly benchmarkExporter: BenchmarkCsvExporter;
   private readonly exportService: IExportService;
   private readonly retryPolicy: RetryPolicy;
+  private readonly retryBackoffMs: number;
   private readonly clock: Clock;
 
   public constructor(deps: CampaignRunnerDependencies) {
@@ -126,6 +142,7 @@ export class CampaignRunner {
     this.benchmarkExporter = deps.benchmarkExporter ?? new BenchmarkCsvExporter();
     this.exportService = deps.exportService ?? createExportService();
     this.retryPolicy = deps.retryPolicy ?? new RetryPolicy();
+    this.retryBackoffMs = deps.retryBackoffMs ?? 2000;
     this.clock = deps.clock ?? new SystemClock();
   }
 
@@ -145,37 +162,95 @@ export class CampaignRunner {
     const outcomes: ExecutionOutcome[] = [];
     const snapshotByInstance = new Map<string, string>();
 
-    for (const entry of manifest.entries()) {
-      if (entry.status === "completed") {
-        // Resumed: keep the snapshot so its siblings reuse it (fairness).
-        if (entry.snapshotId) {
-          snapshotByInstance.set(entry.instanceId, entry.snapshotId);
+    const maxConcurrency = Math.max(1, config.maxConcurrency ?? 1);
+    if (maxConcurrency <= 1) {
+      // Sequential — untouched: default/undefined/1 is byte-identical to the
+      // pre-concurrency implementation.
+      for (const entry of manifest.entries()) {
+        if (entry.status === "completed") {
+          // Resumed: keep the snapshot so its siblings reuse it (fairness).
+          if (entry.snapshotId) {
+            snapshotByInstance.set(entry.instanceId, entry.snapshotId);
+          }
+          continue;
         }
-        continue;
+        const loadedInstance = instancesById.get(entry.instanceId);
+        if (!loadedInstance) {
+          continue; // instance no longer in the dataset subset
+        }
+
+        // Import each instance exactly once; all architectures share the snapshot.
+        const snapshotId = await this.resolveSnapshot(
+          loadedInstance,
+          snapshotByInstance,
+          reporter,
+        );
+
+        const outcome = await this.executeWithRetry(
+          entry,
+          loadedInstance,
+          snapshotId,
+          executor,
+          manifest,
+          reporter,
+        );
+        if (outcome) {
+          outcomes.push(outcome);
+        }
       }
-      const loadedInstance = instancesById.get(entry.instanceId);
-      if (!loadedInstance) {
-        continue; // instance no longer in the dataset subset
+    } else {
+      // Bounded-concurrency worker pool. Collect the incomplete entries first
+      // (mirroring the sequential skip logic exactly), then drain the queue
+      // with up to `maxConcurrency` workers running concurrently.
+      const pending: Array<{ entry: ManifestEntry; loadedInstance: LoadedInstance }> = [];
+      for (const entry of manifest.entries()) {
+        if (entry.status === "completed") {
+          if (entry.snapshotId) {
+            snapshotByInstance.set(entry.instanceId, entry.snapshotId);
+          }
+          continue;
+        }
+        const loadedInstance = instancesById.get(entry.instanceId);
+        if (!loadedInstance) {
+          continue;
+        }
+        pending.push({ entry, loadedInstance });
       }
 
-      // Import each instance exactly once; all architectures share the snapshot.
-      const snapshotId = await this.resolveSnapshot(
-        loadedInstance,
-        snapshotByInstance,
-        reporter,
-      );
+      // Per-instance in-flight import promise, so concurrent entries for the
+      // same instance await the *same* import instead of racing a check-then-set.
+      const snapshotPromises = new Map<string, Promise<string>>();
+      let cursor = 0;
+      const runWorker = async (): Promise<void> => {
+        for (;;) {
+          const i = cursor;
+          cursor += 1;
+          if (i >= pending.length) {
+            return;
+          }
+          const { entry, loadedInstance } = pending[i]!;
+          const snapshotId = await this.resolveSnapshotConcurrent(
+            loadedInstance,
+            snapshotByInstance,
+            snapshotPromises,
+            reporter,
+          );
+          const outcome = await this.executeWithRetry(
+            entry,
+            loadedInstance,
+            snapshotId,
+            executor,
+            manifest,
+            reporter,
+          );
+          if (outcome) {
+            outcomes.push(outcome);
+          }
+        }
+      };
 
-      const outcome = await this.executeWithRetry(
-        entry,
-        loadedInstance,
-        snapshotId,
-        executor,
-        manifest,
-        reporter,
-      );
-      if (outcome) {
-        outcomes.push(outcome);
-      }
+      const workerCount = Math.min(maxConcurrency, pending.length);
+      await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
     }
 
     // Fold in outcomes for entries that were already completed on resume.
@@ -277,6 +352,44 @@ export class CampaignRunner {
     return imported.snapshotId;
   }
 
+  /**
+   * Concurrency-safe variant of {@link resolveSnapshot}: import an instance
+   * exactly once even when several of its entries are dispatched to worker-pool
+   * slots at (nearly) the same time. Memoizes the in-flight import as a
+   * `Promise<string>` keyed by instanceId — concurrent callers for the same
+   * instance synchronously observe and await that same promise, so there is no
+   * check-then-set window where two workers both decide to import.
+   */
+  private resolveSnapshotConcurrent(
+    loaded: LoadedInstance,
+    snapshotByInstance: Map<string, string>,
+    snapshotPromises: Map<string, Promise<string>>,
+    reporter: ProgressReporter,
+  ): Promise<string> {
+    const instanceId = loaded.instance.instanceId;
+    const cached = snapshotByInstance.get(instanceId);
+    if (cached) {
+      return Promise.resolve(cached);
+    }
+    const inFlight = snapshotPromises.get(instanceId);
+    if (inFlight) {
+      return inFlight;
+    }
+    const promise = this.deps.importService
+      .importManualDiff({
+        title: loaded.instance.title,
+        source: "synthetic",
+        rawDiff: loaded.instance.rawDiff,
+      })
+      .then((imported) => {
+        snapshotByInstance.set(instanceId, imported.snapshotId);
+        reporter.instanceImported(instanceId, imported.snapshotId);
+        return imported.snapshotId;
+      });
+    snapshotPromises.set(instanceId, promise);
+    return promise;
+  }
+
   /** Execute one entry with the retry policy; returns the outcome or null on failure. */
   private async executeWithRetry(
     entry: ManifestEntry,
@@ -315,6 +428,12 @@ export class CampaignRunner {
           manifest.update(key, { status: "retry-scheduled", error: message });
           reporter.runRetry(key, attempts, message);
           await this.deps.manifestStore?.save(manifest.toJSON());
+          // Exponential backoff so a Bedrock throttling window clears before we
+          // re-attempt (immediate retries during a throttle just fail again).
+          const waitMs = Math.min(30_000, this.retryBackoffMs * 2 ** (attempts - 1));
+          if (waitMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
+          }
           continue;
         }
         // Terminal failure: record it, but never abort the campaign.

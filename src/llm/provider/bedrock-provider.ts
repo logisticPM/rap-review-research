@@ -104,6 +104,7 @@ export class BedrockProvider implements ILLMProvider {
         usage.outputTokens,
         this.pricing,
       ),
+      stopReason: output.stopReason,
     };
   }
 

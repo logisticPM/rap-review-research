@@ -1,0 +1,22 @@
+{
+  "label": "zai.glm-5@v1",
+  "model": "zai.glm-5",
+  "promptVersion": "v1",
+  "devIds": [
+    "aspnetcore-pr-8",
+    "aspnetcore-pr-9",
+    "aspnetcore-pr-10",
+    "cal.com-pr-1",
+    "cal.com-pr-2"
+  ],
+  "runsPerInstance": 2,
+  "completed": 10,
+  "expected": 10,
+  "zeroFinding": 0,
+  "findingsPerRun": 3.6,
+  "strict": {
+    "p": 0.575,
+    "r": 0.3516666666666667,
+    "f1": 0.43159340659340656
+  }
+}

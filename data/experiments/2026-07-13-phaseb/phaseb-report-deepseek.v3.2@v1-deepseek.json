@@ -1,0 +1,22 @@
+{
+  "label": "deepseek.v3.2@v1-deepseek",
+  "model": "deepseek.v3.2",
+  "promptVersion": "v1-deepseek",
+  "devIds": [
+    "aspnetcore-pr-8",
+    "aspnetcore-pr-9",
+    "aspnetcore-pr-10",
+    "cal.com-pr-1",
+    "cal.com-pr-2"
+  ],
+  "runsPerInstance": 2,
+  "completed": 10,
+  "expected": 10,
+  "zeroFinding": 3,
+  "findingsPerRun": 2.8,
+  "strict": {
+    "p": 0.385,
+    "r": 0.2358333333333334,
+    "f1": 0.28202686202686206
+  }
+}

@@ -2,7 +2,7 @@
   "name": "rap-review-research",
   "version": "0.1.0",
   "private": true,
-  "description": "AI Code Review Experiment Platform — Experiment Engine (RFC-01)",
+  "description": "AI Code Review Experiment Platform ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Experiment Engine (RFC-01)",
   "type": "module",
   "engines": {
     "node": ">=22.18.0"
@@ -27,8 +27,19 @@
     "benchmark:export": "node scripts/benchmark-export.ts",
     "campaign:run": "node scripts/campaign-run.ts",
     "campaign:live": "node scripts/campaign-live.ts",
+    "verify:replay": "node scripts/verify-replay.ts",
     "smoke:bedrock": "node scripts/smoke-bedrock.ts",
-    "check": "npm run typecheck && npm run test"
+    "smoke:rap": "node scripts/rap-portal-smoke.ts",
+    "judge:eval": "node scripts/benchmark-judge-eval.ts",
+    "swe:eval": "node scripts/benchmark-swe-eval.ts",
+    "check": "npm run typecheck && npm run test",
+    "bon:eval": "node scripts/verifier-bon-eval.ts",
+    "golden:completeness": "node scripts/golden-completeness.ts",
+    "hetero:eval": "node scripts/hetero-team-eval.ts",
+    "hetero:recluster": "node scripts/hetero-semantic-recluster.ts",
+    "bon:auc": "node scripts/verifier-auc-corrected.ts",
+    "phaseb:dev": "node scripts/phaseb-adapt-eval.ts",
+    "phaseb:sample": "node scripts/phaseb-annotation-sample.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

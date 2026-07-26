@@ -30,3 +30,24 @@ export type {
 export type { ExperimentComparison } from "./models/experiment-comparison.ts";
 export type { EvaluationExportRow } from "./models/evaluation-export-row.ts";
 export { toEvaluationExportRow } from "./models/evaluation-export-row.ts";
+
+// Industrial Verification (RAP Portal case study, experiment E3). Additive.
+export type {
+  ArchitectureFindings,
+  StaticAnalysisFinding,
+  FindingVerdict,
+  ChangedRange,
+  IndustrialVerificationContext,
+  IndustrialVerificationSignals,
+  FindingSimilarityOptions,
+  ArchitectureAgreementResult,
+  IndustrialVerificationDependencies,
+} from "./industrial/index.ts";
+export {
+  FindingSimilarity,
+  ArchitectureAgreementCalculator,
+  StaticAnalysisAgreementCalculator,
+  LlmJudgeValidationCalculator,
+  LaterFixRateCalculator,
+  IndustrialVerification,
+} from "./industrial/index.ts";

@@ -20,4 +20,10 @@ export interface BenchmarkRun {
   readonly architecture: ReviewArchitecture;
   readonly producedFindings: ReviewFinding[];
   readonly groundTruth: GroundTruthIssue[];
+  /**
+   * The instance's unified diff. Optional; when present, the evaluator anchors
+   * findings that carry a `snippet` to their true line for snippet-anchored
+   * localization (A3 eval-side).
+   */
+  readonly rawDiff?: string;
 }

@@ -1,5 +1,11 @@
 # 01 — Experiment Plan
 
+> **⚠ Superseded for the current design.** This document predates the
+> `generalists-3` control arm and the test-time-compute reframing. For the
+> authoritative methodology (RQs, hypotheses, arms, sample sizes, analysis plan)
+> see [`04-preregistration.md`](04-preregistration.md); this file will be revised
+> to match at freeze time.
+
 **Document:** Experiment Plan
 
 **Version:** 1.0

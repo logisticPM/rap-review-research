@@ -14,6 +14,7 @@ export const reviewFindingInputSchema = z.object({
   category: z.string().min(1),
   file: z.string().min(1),
   line: z.number(),
+  snippet: z.string().optional(),
   description: z.string().min(1),
   recommendation: z.string().min(1),
   confidence: z.number(),

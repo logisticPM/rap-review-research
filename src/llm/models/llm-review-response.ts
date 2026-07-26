@@ -13,4 +13,20 @@ export interface LLMReviewResponse {
   readonly outputTokens: number;
   readonly latencyMs: number;
   readonly estimatedCostUsd: number;
+  /**
+   * Why generation stopped, as reported by the provider (Bedrock Converse:
+   * "end_turn" | "max_tokens" | "stop_sequence" | ...). Undefined when the
+   * provider does not report one. Used to detect truncation (B2).
+   */
+  readonly stopReason?: string;
+}
+
+/**
+ * True when a response was cut off by the output-token cap (B2). A truncated
+ * review can silently lose findings, so on large PRs an architecture with a
+ * single completion (agentless) may show lower recall for a token-budget
+ * reason rather than a topology one — hence we count it per experiment.
+ */
+export function isTruncatedStopReason(stopReason: string | undefined): boolean {
+  return stopReason === "max_tokens";
 }

@@ -53,8 +53,11 @@ export class ComparisonService {
       }
     }
 
+    // Use the industrial-aware batch so cross-architecture agreement is
+    // populated (it needs the sibling architectures, which we have here). No
+    // external evidence is supplied, so human/later-fix signals stay undefined.
     const comparison = this.selectComparison(
-      this.evaluation.evaluateBatch(stored),
+      this.evaluation.evaluateBatchIndustrial(stored),
       snapshotId,
     );
     return this.builder.build({ snapshotId, comparison });

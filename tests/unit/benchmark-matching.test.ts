@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import type { ReviewFinding } from "../../src/models/finding.ts";
-import type { GroundTruthIssue } from "../../src/benchmark/index.ts";
+import type { GroundTruthIssue, ISemanticMatcher } from "../../src/benchmark/index.ts";
 import { IssueMatcher, NoopSemanticMatcher } from "../../src/benchmark/index.ts";
 
 function finding(overrides: Partial<ReviewFinding> = {}): ReviewFinding {
@@ -85,4 +85,31 @@ test("semantic matching is a no-op placeholder (no score, no LLM)", () => {
     gt(),
   );
   assert.equal(m.semanticScore, undefined);
+});
+
+test("a semantic score >= threshold rescues a same-file, non-overlapping match", () => {
+  const stub: ISemanticMatcher = { score: () => 0.9 };
+  const m = new IssueMatcher({ semanticMatcher: stub, semanticThreshold: 0.7 });
+  const result = m.match(finding({ line: 50 }), gt()); // 50 not in [10,12]
+  assert.equal(result.lineOverlap, false);
+  assert.equal(result.semanticScore, 0.9);
+  assert.equal(result.matched, true);
+});
+
+test("a semantic score below threshold does not rescue", () => {
+  const stub: ISemanticMatcher = { score: () => 0.5 };
+  const m = new IssueMatcher({ semanticMatcher: stub, semanticThreshold: 0.7 });
+  assert.equal(m.match(finding({ line: 50 }), gt()).matched, false);
+});
+
+test("default (Noop) matcher leaves line-based matching unchanged", () => {
+  const m = new IssueMatcher();
+  assert.equal(m.match(finding({ line: 50 }), gt()).matched, false);
+  assert.equal(m.match(finding({ line: 11 }), gt()).matched, true);
+});
+
+test("semantic rescue does not override a different-file mismatch", () => {
+  const stub: ISemanticMatcher = { score: () => 1 };
+  const m = new IssueMatcher({ semanticMatcher: stub });
+  assert.equal(m.match(finding({ file: "other.ts", line: 11 }), gt()).matched, false);
 });

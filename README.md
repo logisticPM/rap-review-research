@@ -40,7 +40,7 @@ SWE-PRBench) with precision/recall/F1/localization (`npm run benchmark:*`).
 The Experiment Campaign Runner (`src/campaign/`, `npm run campaign:run`)
 orchestrates a full campaign — every benchmark instance reviewed by all three
 architectures — with a reproducible manifest, retries, resume, and
-campaign-level CSV/JSON, following the methodology in `docs/experiment/`.
+campaign-level CSV/JSON, following the methodology in `docs/experiments/`.
 The inline evaluation step in the experiment lifecycle is still an injected
 no-op placeholder.
 
@@ -52,3 +52,35 @@ npm run check   # typecheck (tsc --strict) + unit tests (node:test)
 ```
 
 Requires Node ≥ 22.18 (native TypeScript execution; no build step).
+
+## Reviewing results in the dashboard
+
+Run the read-only Research Dashboard (RFC-11 demo UI):
+
+```bash
+npm run dashboard          # then open http://localhost:4317/   (set PORT to change)
+```
+
+Pages:
+
+- `/experiments` — every experiment, linking to per-experiment `/metrics` and `/replay`.
+- `/comparison` — the architectures that reviewed one snapshot, side by side (includes the **Cross-Architecture Agreement** column).
+- `/exports` — export history, plus `/export?format=csv` / `?format=json` downloads (RFC-10 research dataset).
+
+### Are the smoke-test results saved here? No — not yet.
+
+The dashboard boots from **seeded sample data** (`buildSampleWorkbench()`, snapshot
+`snap_demo`) and reads only that. The live scripts — `npm run smoke:rap`,
+`npm run campaign:live`, and the `demo:*` scripts — build their **own in-memory
+stores in a separate process**, print results to the terminal, and exit. Nothing
+is persisted (the RFC-06 Storage Engine is in-memory) and there is no ingestion
+path wiring script output into the dashboard, so those runs do **not** appear in
+the UI. To review them:
+
+- **Live smoke / campaign runs** — read the script's terminal output. `campaign:live`
+  also prints a full RFC-13 benchmark CSV and RFC-10 comparison CSV/JSON at the end.
+- **The dashboard** — use it to explore the UI and metric layout (including the new
+  industrial-verification columns) against representative sample data.
+
+Persisting real runs and browsing them in the dashboard would require a durable
+Storage Engine implementation plus an ingestion path — see follow-up work.

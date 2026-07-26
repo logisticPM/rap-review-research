@@ -53,6 +53,7 @@ export type {
   CampaignSummary,
   DatasetCoverage,
   CampaignFailure,
+  ArchitectureTruncation,
   BuildCampaignSummaryInput,
 } from "./campaign-summary.ts";
 export { buildCampaignSummary } from "./campaign-summary.ts";
